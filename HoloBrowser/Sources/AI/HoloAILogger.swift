@@ -27,11 +27,18 @@ public final class HoloAILogger: ObservableObject {
     private init() {}
     
     public func log(action: AILogActionType, details: String, payload: String? = nil) {
+        let truncatedPayload: String?
+        if let payload = payload, payload.count > 200 {
+            truncatedPayload = String(payload.prefix(200)) + "..."
+        } else {
+            truncatedPayload = payload
+        }
+        
         let entry = AITransparencyLogEntry(
             timestamp: Date(),
             actionType: action,
             details: details,
-            payloadPreview: payload
+            payloadPreview: truncatedPayload
         )
         logs.insert(entry, at: 0)
         

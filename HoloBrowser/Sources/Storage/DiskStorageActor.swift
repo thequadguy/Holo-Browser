@@ -26,6 +26,12 @@ public actor DiskStorageActor {
                 // 1. Write to temporary file
                 try data.write(to: tmpURL, options: .atomic)
                 
+                // Set restrictive POSIX permissions (0600 - owner read/write only) & file protection
+                try? FileManager.default.setAttributes([
+                    .posixPermissions: 0o600,
+                    .protectionKey: FileProtectionType.complete
+                ], ofItemAtPath: tmpURL.path)
+                
                 // 2. Rotate current file to backup (if it exists)
                 if FileManager.default.fileExists(atPath: url.path) {
                     try? FileManager.default.removeItem(at: backupURL)
@@ -34,6 +40,12 @@ public actor DiskStorageActor {
                 
                 // 3. Atomically replace original with tmp
                 let _ = try FileManager.default.replaceItemAt(url, withItemAt: tmpURL)
+                
+                // Ensure target file retains restrictive attributes
+                try? FileManager.default.setAttributes([
+                    .posixPermissions: 0o600,
+                    .protectionKey: FileProtectionType.complete
+                ], ofItemAtPath: url.path)
                 
                 return
             } catch {

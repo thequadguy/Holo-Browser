@@ -14,17 +14,19 @@ public enum URLSanitizer {
             return URL(string: "about:blank")!
         }
         
-        // 1. Check if input has explicit http:// or https:// scheme
-        if trimmed.hasPrefix("http://") || trimmed.hasPrefix("https://") {
-            if let url = URL(string: trimmed) {
-                return url
+        // 1. Check if input has explicit supported schemes (http, https, file, about)
+        if let components = URLComponents(string: trimmed), let scheme = components.scheme?.lowercased() {
+            if ["http", "https", "file", "about"].contains(scheme) {
+                if let url = components.url {
+                    return url
+                }
             }
         }
         
         // 2. Check if input looks like a web domain (contains '.' and no spaces)
         if !trimmed.contains(" ") && trimmed.contains(".") {
             let prefixed = "https://" + trimmed
-            if let url = URL(string: prefixed) {
+            if let components = URLComponents(string: prefixed), let url = components.url {
                 return url
             }
         }
