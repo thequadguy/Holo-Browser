@@ -1,0 +1,25 @@
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Swift / SwiftPM
+.build/
+**/.build/
+packages/
+.swiftpm/
+
+# Xcode / Build Artifacts
+Build/
+**/Build/
+DerivedData/
+*.xcworkspace
+!.xcodeproj/project.xcworkspace
+*.xcuserdata
+
+# Node / Dependencies
+node_modules/
+
+# Logs & temporary files
+*.log

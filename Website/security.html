@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Security Architecture — Holo Browser</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="ambient-glow cyan-glow"></div>
+  <div class="glass-grid-backdrop"></div>
+
+  <header>
+    <a href="index.html" class="logo">
+      <div class="logo-icon"><span class="h-symbol">H</span></div>
+      <span class="logo-text">Holo Browser</span>
+      <span class="version-tag">BETA</span>
+    </a>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="beta.html" class="btn-primary">Download Beta</a>
+    </nav>
+  </header>
+
+  <main style="max-width: 800px; margin: 60px auto; padding: 0 20px; position: relative; z-index: 10;">
+    <div class="hero-badge">
+      <span class="badge-dot"></span>
+      <span>HARDWARE-BACKED SECURITY ARCHITECTURE</span>
+    </div>
+    <h1 style="font-size: 2.8rem; margin-bottom: 16px;">Defense-in-Depth for WebKit</h1>
+    <p style="color: var(--text-secondary); margin-bottom: 40px; font-size: 1.1rem;">Multi-layered security containment built exclusively for Apple Silicon and Intel Macs.</p>
+
+    <div class="features-grid" style="grid-template-columns: 1fr; gap: 20px;">
+      <div class="feature-card">
+        <div class="feature-badge">KEYCHAIN VAULT</div>
+        <h3>1. Keychain Credential Security</h3>
+        <p>All passwords and auth tokens are saved exclusively using Apple Security.framework (<code>kSecAttrAccessibleWhenUnlockedThisDeviceOnly</code>) with optional Touch ID biometric unlock.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-badge">DOWNLOAD PROTECTION</div>
+        <h3>2. Path Traversal & Destination Containment</h3>
+        <p><code>DownloadManager</code> strips relative path components (<code>..</code>) and forces strict destination containment inside <code>~/Downloads/</code> to prevent file overwrite exploits.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-badge">SELF-HEALING DIAGNOSTICS</div>
+        <h3>3. HoloDoctor Circuit Breakers</h3>
+        <p>An 8-point self-healing engine monitors WebContent processes. If a webpage causes process termination, HoloDoctor traps the crash, resets state, and prevents crash loops.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-badge">TRACKER BLOCKING</div>
+        <h3>4. WebKit Content Rule List Engine</h3>
+        <p>Injects native <code>WKContentRuleList</code> rules to block tracking beacons, crypto miners, cross-site cookies, and fingerprinting scripts before network dispatch.</p>
+      </div>
+    </div>
+  </main>
+</body>
+</html>
