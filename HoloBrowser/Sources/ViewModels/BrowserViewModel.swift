@@ -239,10 +239,10 @@ public final class BrowserViewModel: NSObject, ObservableObject, WKScriptMessage
         case .web(let url):
             inputURLString = url.absoluteString
             activeTab.navigationManager.load(url: url)
-        case .ai(let query):
-            NotificationCenter.default.post(name: NSNotification.Name("HoloSmartSearchAI"), object: query)
+        case .ai(let query, _):
+            HoloEventBus.shared.post(.smartSearchAI(query: query))
         case .mission(let query):
-            NotificationCenter.default.post(name: NSNotification.Name("HoloSmartSearchMission"), object: query)
+            HoloEventBus.shared.post(.smartSearchMission(query: query))
         }
     }
     

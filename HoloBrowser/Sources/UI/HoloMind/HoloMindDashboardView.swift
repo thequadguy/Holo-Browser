@@ -134,7 +134,60 @@ public struct HoloMindDashboardView: View {
             }
             .padding(12)
             .background(RoundedRectangle(cornerRadius: 8).fill(Color.purple.opacity(0.08)))
-            
+
+            // Page Summary Result Area
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: "doc.text.magnifyingglass")
+                        .foregroundColor(.purple)
+                    Text("Page Summary")
+                        .font(.system(size: 12, weight: .bold))
+                }
+
+                if mindEngine.isSummarizing {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Extracting and summarizing page content…")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(RoundedRectangle(cornerRadius: 6).fill(Color.purple.opacity(0.06)))
+                } else if let error = mindEngine.summaryError {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.orange)
+                            .font(.system(size: 12))
+                        Text(error)
+                            .font(.system(size: 11))
+                            .foregroundColor(.primary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(10)
+                    .background(RoundedRectangle(cornerRadius: 6).fill(Color.orange.opacity(0.08)))
+                } else if let summary = mindEngine.lastSummaryText {
+                    ScrollView {
+                        Text(summary)
+                            .font(.system(size: 11))
+                            .foregroundColor(.primary)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .frame(maxHeight: 140)
+                    .padding(10)
+                    .background(RoundedRectangle(cornerRadius: 6).fill(Color.gray.opacity(0.06)))
+                } else {
+                    Text("Summarize the active page using the toolbar AI button or right-click → \"H: Summarize Selection\".")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                        .padding(10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(RoundedRectangle(cornerRadius: 6).fill(Color.gray.opacity(0.04)))
+                }
+            }
+
             // Assign New Goal Bar
             VStack(alignment: .leading, spacing: 8) {
                 Text("Assign Mission / Goal").font(.system(size: 12, weight: .bold))

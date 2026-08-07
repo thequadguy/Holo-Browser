@@ -61,11 +61,11 @@ public final class HoloWebView: WKWebView {
     }
     
     @objc private func holoSummarizeSelection() {
-        NotificationCenter.default.post(name: NSNotification.Name("HoloQuickActionSummarize"), object: nil)
+        HoloEventBus.shared.post(.quickActionSummarize)
     }
     
     @objc private func holoSaveToMemory() {
-        NotificationCenter.default.post(name: NSNotification.Name("HoloQuickActionSaveMemory"), object: nil)
+        HoloEventBus.shared.post(.quickActionSaveMemory)
     }
     
     required init?(coder: NSCoder) {

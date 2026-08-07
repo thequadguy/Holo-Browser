@@ -13,6 +13,7 @@ public struct HoloWelcomeView: View {
     @AppStorage("holoAskBeforeRemembering") private var holoAskBeforeRemembering: Bool = false
     
     @State private var currentStep: Int = 0
+    @State private var showSpotlightMode: Bool = false
     @State private var selectedBrowserSource: String = "Chrome"
     @State private var importedBookmarkCount: Int = 0
     @State private var importStatus: String? = nil
@@ -22,29 +23,45 @@ public struct HoloWelcomeView: View {
     }
     
     public var body: some View {
-        VStack(spacing: 0) {
-            // Header Banner
-            HStack(spacing: 14) {
-                Image(systemName: "globe.americas.fill")
-                    .font(.system(size: 32))
-                    .foregroundStyle(HoloTheme.Palette.heroGradient)
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Holo Browser")
-                        .font(.system(size: 22, weight: .bold))
-                    Text("Liquid Glass Web Engine for macOS")
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
+        if showSpotlightMode {
+            HoloOnboardingView(onComplete: onComplete)
+        } else {
+            VStack(spacing: 0) {
+                // Header Banner
+                HStack(spacing: 14) {
+                    Image(systemName: "globe.americas.fill")
+                        .font(.system(size: 32))
+                        .foregroundStyle(HoloTheme.Palette.heroGradient)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Holo Browser")
+                            .font(.system(size: 22, weight: .bold))
+                        Text("Liquid Glass Web Engine for macOS")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    Button("Spotlight Tour") {
+                        withAnimation(HoloDesign.Animations.springFast) {
+                            showSpotlightMode = true
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(HoloTheme.Palette.holoCyan)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(HoloTheme.Palette.holoCyan.opacity(0.12))
+                    .cornerRadius(6)
+                    
+                    HoloBadge("Step \(currentStep + 1) of 5", color: .accentColor)
                 }
+                .padding(20)
+                .background(VisualEffectViewWrapper(material: .headerView, blendingMode: .withinWindow))
                 
-                Spacer()
-                
-                HoloBadge("Step \(currentStep + 1) of 5", color: .accentColor)
-            }
-            .padding(20)
-            .background(VisualEffectViewWrapper(material: .headerView, blendingMode: .withinWindow))
-            
-            Divider()
+                Divider()
             
             // Step Body Canvas
             VStack(alignment: .leading, spacing: 18) {
@@ -99,6 +116,7 @@ public struct HoloWelcomeView: View {
         }
         .frame(width: 620, height: 540)
         .holoGlassCard(cornerRadius: 14, padding: 0)
+        }
     }
     
     // MARK: - Step Views

@@ -23,6 +23,8 @@ public final class SessionManager: ObservableObject {
         }
     }
     
+    private var pendingSaveTask: Task<Void, Never>? = nil
+    
     public func saveActiveSession(tabs: [Tab], activeTabIndex: Int, profileID: UUID, isPrivate: Bool) {
         guard !isPrivate else { return } // Never save private sessions
         
@@ -44,7 +46,11 @@ public final class SessionManager: ObservableObject {
         self.lastSavedSession = session
         let url = self.fileURL
         
-        Task {
+        // Debounce: Cancel previous pending save and schedule new save after 500ms
+        pendingSaveTask?.cancel()
+        pendingSaveTask = Task {
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            guard !Task.isCancelled else { return }
             try? await DiskStorageActor.shared.write(session, to: url)
         }
     }

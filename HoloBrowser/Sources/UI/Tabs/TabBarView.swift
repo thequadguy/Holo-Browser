@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Floating glass tab bar component hosting liquid tab items and new tab creation.
+/// Floating glass tab bar component hosting liquid tab items, new tab creation, and tab overflow selection menu.
 public struct TabBarView: View {
     @ObservedObject var tabManager: TabManager
     let activeProfileID: UUID
@@ -14,27 +14,64 @@ public struct TabBarView: View {
     
     public var body: some View {
         HStack(spacing: 4) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 4) {
-                    ForEach(tabManager.tabs) { tab in
-                        TabItemView(
-                            tab: tab,
-                            isActive: tab.id == tabManager.activeTabID,
-                            onSelect: {
-                                withAnimation(HoloDesign.Animations.springFast) {
-                                    tabManager.selectTab(id: tab.id)
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 4) {
+                        ForEach(tabManager.tabs) { tab in
+                            TabItemView(
+                                tab: tab,
+                                isActive: tab.id == tabManager.activeTabID,
+                                onSelect: {
+                                    withAnimation(HoloDesign.Animations.springFast) {
+                                        tabManager.selectTab(id: tab.id)
+                                    }
+                                },
+                                onClose: {
+                                    withAnimation(HoloDesign.Animations.springFast) {
+                                        tabManager.closeTab(id: tab.id, currentProfileID: activeProfileID)
+                                    }
                                 }
-                            },
-                            onClose: {
-                                withAnimation(HoloDesign.Animations.springFast) {
-                                    tabManager.closeTab(id: tab.id, currentProfileID: activeProfileID)
-                                }
-                            }
-                        )
+                            )
+                            .frame(minWidth: 110, maxWidth: 180)
+                            .id(tab.id)
+                        }
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                }
+                .onChange(of: tabManager.activeTabID) { oldID, newID in
+                    if let newID = newID {
+                        withAnimation {
+                            proxy.scrollTo(newID, anchor: .center)
+                        }
                     }
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
+            }
+            
+            // Tab Overflow Menu Button (Lists all open tabs for instant selection on smaller screens)
+            if tabManager.tabs.count > 5 {
+                Menu {
+                    ForEach(tabManager.tabs) { tab in
+                        Button(action: {
+                            tabManager.selectTab(id: tab.id)
+                        }) {
+                            HStack {
+                                if tab.id == tabManager.activeTabID {
+                                    Image(systemName: "checkmark")
+                                }
+                                Text(tab.title.isEmpty ? (tab.url?.absoluteString ?? "New Tab") : tab.title)
+                            }
+                        }
+                    }
+                } label: {
+                    Image(systemName: "square.stack")
+                        .font(.system(size: 11, weight: .bold))
+                        .frame(width: 24, height: 24)
+                        .background(Circle().fill(Color.gray.opacity(0.12)))
+                }
+                .menuStyle(.borderlessButton)
+                .frame(width: 24, height: 24)
+                .help("All Open Tabs (\(tabManager.tabs.count))")
             }
             
             // New Tab "+" Button
@@ -58,9 +95,5 @@ public struct TabBarView: View {
             .help("New Tab (⌘T)")
         }
         .padding(.horizontal, 6)
-        .padding(.vertical, 4)
-        .holoGlassTier(cornerRadius: 14)
-        .padding(.horizontal, 8)
-        .padding(.top, 4)
     }
 }

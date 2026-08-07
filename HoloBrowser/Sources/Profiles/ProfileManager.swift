@@ -114,6 +114,24 @@ public final class ProfileManager: ObservableObject {
         storage.saveProfiles(profiles)
     }
     
+    /// Selects or creates a profile for the specified purpose (Personal, Work, Private).
+    public func selectProfile(byPurpose purpose: ProfilePurpose) {
+        if let existing = profiles.first(where: { $0.purpose == purpose }) {
+            selectProfile(id: existing.id)
+        } else {
+            let isPriv = (purpose == .privateBrowsing)
+            let newProf = createProfile(
+                name: purpose.rawValue,
+                colorHex: purpose == .work ? "#5856D6" : (isPriv ? "#FF9500" : "#007AFF"),
+                iconName: purpose == .work ? "briefcase.fill" : (isPriv ? "shield.slash.fill" : "person.fill"),
+                purpose: purpose,
+                aiMemoryEnabled: !isPriv,
+                isPrivate: isPriv
+            )
+            selectProfile(id: newProf.id)
+        }
+    }
+    
     /// Deletes a profile and clears its isolated data store.
     public func deleteProfile(id: UUID) {
         guard profiles.count > 1 else { return } // Keep at least 1 profile
@@ -143,5 +161,15 @@ public final class ProfileManager: ObservableObject {
         let dataTypes = WKWebsiteDataStore.allWebsiteDataTypes()
         let dateFrom = Date(timeIntervalSince1970: 0)
         store.removeData(ofTypes: dataTypes, modifiedSince: dateFrom) {}
+    }
+    
+    /// Purges all local website data stores across all profiles (Full Safety Wipe for Beta Testers).
+    public func purgeAllBrowsingDataAndMemories() {
+        for profile in profiles {
+            clearProfileBrowsingData(id: profile.id)
+        }
+        let dateFrom = Date(timeIntervalSince1970: 0)
+        WKWebsiteDataStore.default().removeData(ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(), modifiedSince: dateFrom) {}
+        NotificationCenter.default.post(name: NSNotification.Name("HoloDataPurged"), object: nil)
     }
 }

@@ -77,6 +77,20 @@ public struct WebErrorOverlayView: View {
                 }
                 .keyboardShortcut(.escape, modifiers: [])
                 
+                Button(action: {
+                    HoloEventBus.shared.post(.smartSearchAI(query: "Diagnose page error: \(errorMessage)"))
+                    onDismiss()
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "sparkles")
+                        Text("Ask HoloMind AI")
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                }
+                .buttonStyle(.bordered)
+                .foregroundColor(HoloTheme.Palette.holoCyan)
+                
                 Spacer()
                 
                 Button(action: onRetry) {

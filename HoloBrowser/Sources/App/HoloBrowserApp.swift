@@ -3,12 +3,11 @@ import SwiftUI
 @main
 struct HoloBrowserApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @State private var showAbout = false
-    @State private var showFeedback = false
+    @StateObject private var environment = BrowserEnvironment()
     
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(environment: environment)
         }
         .windowStyle(.titleBar)
         .windowToolbarStyle(.unified)
@@ -23,7 +22,7 @@ struct HoloBrowserApp: App {
                 .keyboardShortcut("n", modifiers: [.command])
                 
                 Button("New Tab") {
-                    NotificationCenter.default.post(name: NSNotification.Name("HoloNewTabShortcut"), object: nil)
+                    HoloEventBus.shared.post(.newTabShortcut)
                 }
                 .keyboardShortcut("t", modifiers: [.command])
             }
@@ -31,7 +30,7 @@ struct HoloBrowserApp: App {
             // Preferences / Settings Menu (Cmd + ,)
             CommandGroup(replacing: .appSettings) {
                 Button("Preferences…") {
-                    NotificationCenter.default.post(name: NSNotification.Name("HoloOpenSettings"), object: nil)
+                    HoloEventBus.shared.post(.openSettings)
                 }
                 .keyboardShortcut(",", modifiers: [.command])
             }
@@ -39,19 +38,19 @@ struct HoloBrowserApp: App {
             // Replace default About menu item with custom About window / sheet
             CommandGroup(replacing: .appInfo) {
                 Button("About Holo Browser") {
-                    NotificationCenter.default.post(name: NSNotification.Name("HoloOpenAbout"), object: nil)
+                    HoloEventBus.shared.post(.openAbout)
                 }
             }
             
             // Help menu with feedback
             CommandGroup(replacing: .help) {
                 Button("Send Feedback…") {
-                    NotificationCenter.default.post(name: NSNotification.Name("HoloOpenFeedback"), object: nil)
+                    HoloEventBus.shared.post(.openFeedback)
                 }
                 .keyboardShortcut("?", modifiers: [.command, .shift])
                 
                 Button("Report Dogfood Feedback…") {
-                    NotificationCenter.default.post(name: NSNotification.Name("HoloOpenDogfood"), object: nil)
+                    HoloEventBus.shared.post(.openDogfood)
                 }
                 .keyboardShortcut("d", modifiers: [.command, .option])
                 
@@ -64,16 +63,5 @@ struct HoloBrowserApp: App {
                 }
             }
         }
-        
-        Settings {
-            PreferencesView()
-        }
-        
-        // About Window
-        Window("About Holo Browser", id: "about") {
-            AboutHoloBrowserView()
-        }
-        .windowResizability(.contentSize)
-        .defaultPosition(.center)
     }
 }

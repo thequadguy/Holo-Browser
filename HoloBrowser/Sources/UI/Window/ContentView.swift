@@ -1,26 +1,22 @@
 import SwiftUI
 
 /// Main window content layout synthesizing Liquid Glass UI, AI Sidebar, Command Palette, Session Recovery, Library Views, and WebKit canvas.
+/// Environment-injected composition view receiving dependencies from BrowserEnvironment and OverlayCoordinator.
 public struct ContentView: View {
-    @StateObject private var viewModel = BrowserViewModel()
+    @ObservedObject var environment: BrowserEnvironment
+    @ObservedObject var overlayCoordinator: OverlayCoordinator
+    
+    @StateObject private var viewModel: BrowserViewModel
     @StateObject private var commandManager = CommandManager()
     @StateObject private var modeManager = ModeManager()
-    @StateObject private var aiManager = AIManager()
-    @StateObject private var historyStore = HistoryStore()
-    @StateObject private var privacyManager = AIPrivacyManager()
-    @StateObject private var permissionManager = PermissionManager()
-    @StateObject private var extensionManager = ExtensionManager()
-    @StateObject private var reliabilityManager = ReliabilityManager()
-    @StateObject private var mindEngine = HoloMindEngine()
     
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
-    @State private var showWelcomeSheet: Bool = false
-    @State private var showFeedbackSheet: Bool = false
-    @State private var showImportWizardSheet: Bool = false
-    @State private var showAboutSheet: Bool = false
-    @State private var showDogfoodSheet: Bool = false
     
-    public init() {}
+    public init(environment: BrowserEnvironment) {
+        self.environment = environment
+        self.overlayCoordinator = environment.overlayCoordinator
+        self._viewModel = StateObject(wrappedValue: environment.makeBrowserViewModel())
+    }
     
     public var body: some View {
         ZStack {
@@ -40,25 +36,36 @@ public struct ContentView: View {
                             viewModel: viewModel,
                             commandManager: commandManager,
                             modeManager: modeManager,
-                            aiManager: aiManager,
-                            onOpenSettings: { SettingsWindowController.shared.open(viewModel: viewModel, privacyManager: privacyManager) },
-                            onOpenImportWizard: { showImportWizardSheet = true },
-                            onOpenHoloMind: { mindEngine.togglePanel() },
+                            aiManager: environment.aiManager,
+                            onOpenSettings: { SettingsWindowController.shared.open(viewModel: viewModel, privacyManager: environment.privacyManager) },
+                            onOpenImportWizard: { overlayCoordinator.showImportWizardSheet = true },
+                            onOpenHoloMind: { environment.mindEngine.togglePanel() },
                             onExecuteQuickAction: { action in
-                                mindEngine.executeQuickAction(action, context: "Current tab context", profile: viewModel.profileManager.activeProfile)
+                                if action == .summarizePage,
+                                   let webView = viewModel.tabManager.activeTab?.webView {
+                                    environment.mindEngine.summarizePage(
+                                        webView: webView,
+                                        aiManager: environment.aiManager,
+                                        profile: viewModel.profileManager.activeProfile
+                                    )
+                                } else {
+                                    environment.mindEngine.executeQuickAction(action, context: nil, profile: viewModel.profileManager.activeProfile)
+                                }
                             }
                         )
                         .transition(.move(edge: .top).combined(with: .opacity))
                     }
                     
                     // Web Content Area
-                    // P0-B: Guard against .closed tabs — WKWebViewWrapper must never be rendered
-                    // for a closed tab or it will hit the assertionFailure fallback.
                     ZStack(alignment: .topTrailing) {
-                        if let activeTab = viewModel.tabManager.activeTab, activeTab.state != .closed {
+                        if !hasCompletedOnboarding {
+                            // Bright Liquid Glass background card while onboarding is presented
+                            VisualEffectViewWrapper(material: .popover, blendingMode: .behindWindow)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        } else if let activeTab = viewModel.tabManager.activeTab, activeTab.state != .closed {
                             if activeTab.url?.scheme == "holo" && activeTab.url?.host == "start" {
                                 HoloStartPageView(
-                                    mindEngine: mindEngine,
+                                    mindEngine: environment.mindEngine,
                                     tabManager: viewModel.tabManager,
                                     currentProfileID: viewModel.profileManager.activeProfile.id,
                                     isPrivateMode: viewModel.profileManager.activeProfile.isPrivate
@@ -86,13 +93,11 @@ public struct ContentView: View {
                 }
                 
                 // Native AI Sidebar Drawer
-                if aiManager.isSidebarVisible {
-                    AISidebarView(aiManager: aiManager, activeTab: viewModel.tabManager.activeTab)
+                if environment.aiManager.isSidebarVisible {
+                    AISidebarView(aiManager: environment.aiManager, activeTab: viewModel.tabManager.activeTab)
                         .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
             }
-            
-
             
             // Password Save Permission Overlay Banner
             if let prompt = viewModel.passwordManager.promptSaveCredential {
@@ -119,10 +124,7 @@ public struct ContentView: View {
                         .font(.system(size: 11))
                         
                         Button("Save Password") {
-                            // P1-5: consumePasswordData() is mutating — work on a var copy.
                             var mutablePrompt = prompt
-                            
-                            // Extract data and immediately zero it from the prompt structure.
                             let pwData = mutablePrompt.consumePasswordData()
                             
                             Task {
@@ -137,12 +139,11 @@ public struct ContentView: View {
                         }
                         .buttonStyle(.borderedProminent)
                         .font(.system(size: 11, weight: .semibold))
-
                     }
                     .padding(.horizontal, 14)
                     .padding(.vertical, 8)
                     .background(
-                        VisualEffectViewWrapper(material: .hudWindow, blendingMode: .withinWindow)
+                        VisualEffectViewWrapper(material: .popover, blendingMode: .withinWindow)
                             .cornerRadius(12)
                     )
                     .padding(.top, 40)
@@ -173,7 +174,7 @@ public struct ContentView: View {
                             .padding(.horizontal, 10)
                             .padding(.vertical, 6)
                             .background(
-                                VisualEffectViewWrapper(material: .hudWindow, blendingMode: .withinWindow)
+                                VisualEffectViewWrapper(material: .popover, blendingMode: .withinWindow)
                                     .cornerRadius(16)
                             )
                             .foregroundColor(.primary)
@@ -199,9 +200,8 @@ public struct ContentView: View {
                     .transition(.scale(scale: 0.95).combined(with: .opacity))
             }
             
-            // Media Permission Request Prompt (P0-Fix-5)
-            // Surfaces camera/microphone access requests for user approval instead of auto-granting.
-            if let req = permissionManager.pendingRequest {
+            // Media Permission Request Prompt
+            if let req = environment.permissionManager.pendingRequest {
                 VStack {
                     Spacer()
                     HStack(spacing: 12) {
@@ -217,25 +217,25 @@ public struct ContentView: View {
                         }
                         Spacer()
                         Button("Allow") {
-                            permissionManager.approve(id: req.id, rememberDecision: false)
+                            environment.permissionManager.approve(id: req.id, rememberDecision: false)
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(.orange)
                         Button("Deny") {
-                            permissionManager.deny(id: req.id, rememberDecision: false)
+                            environment.permissionManager.deny(id: req.id, rememberDecision: false)
                         }
                         .buttonStyle(.bordered)
                     }
                     .padding()
                     .background(
-                        VisualEffectViewWrapper(material: .hudWindow, blendingMode: .withinWindow)
+                        VisualEffectViewWrapper(material: .popover, blendingMode: .withinWindow)
                             .cornerRadius(12)
                     )
                     .padding(.horizontal, 16)
                     .padding(.bottom, 12)
                 }
                 .transition(.move(edge: .bottom).combined(with: .opacity))
-                .animation(HoloDesign.Animations.springNormal, value: permissionManager.pendingRequest?.id)
+                .animation(HoloDesign.Animations.springNormal, value: environment.permissionManager.pendingRequest?.id)
             }
 
             // Web Error Overlay
@@ -257,22 +257,21 @@ public struct ContentView: View {
         }
         .frame(minWidth: 800, minHeight: 600)
         .background(
-            KeyboardShortcutHandlerView(
-                viewModel: viewModel,
-                commandManager: commandManager,
-                modeManager: modeManager,
-                aiManager: aiManager,
-                onOpenSettings: { SettingsWindowController.shared.open(viewModel: viewModel, privacyManager: privacyManager) }
-            )
+            ZStack {
+                HoloBackgroundView()
+                KeyboardShortcutHandlerView(
+                    viewModel: viewModel,
+                    commandManager: commandManager,
+                    modeManager: modeManager,
+                    aiManager: environment.aiManager,
+                    onOpenSettings: { SettingsWindowController.shared.open(viewModel: viewModel, privacyManager: environment.privacyManager) }
+                )
+            }
         )
         .onAppear {
-            // P1-2: Inject managers FIRST, then call setup() to create the initial tab.
-            // This ensures the first tab's webview gets permissionManager and reliabilityManager
-            // wired at creation time, eliminating the startup delegate race.
-            viewModel.tabManager.permissionManager = permissionManager
-            viewModel.tabManager.reliabilityManager = reliabilityManager
+            viewModel.tabManager.permissionManager = environment.permissionManager
+            viewModel.tabManager.reliabilityManager = environment.reliabilityManager
 
-            // Create the initial tab now that delegates are ready.
             let startupBehavior = HoloCommandCenterSettings.shared.startupBehavior
             if startupBehavior == .previousSession && viewModel.sessionManager.loadPreviousSession() != nil {
                 viewModel.restorePreviousSession()
@@ -287,32 +286,25 @@ public struct ContentView: View {
 
             commandManager.registerDefaultCommands(
                 viewModel: viewModel,
-                aiManager: aiManager,
-                extensionManager: extensionManager,
+                aiManager: environment.aiManager,
+                extensionManager: environment.extensionManager,
                 onToggleMode: {
                     withAnimation(HoloDesign.Animations.springNormal) {
                         modeManager.toggleFocusMode()
                     }
                 },
                 onOpenSettings: {
-                    SettingsWindowController.shared.open(viewModel: viewModel, privacyManager: privacyManager)
+                    SettingsWindowController.shared.open(viewModel: viewModel, privacyManager: environment.privacyManager)
                 }
             )
             if viewModel.sessionManager.hasRecoverableSession {
                 viewModel.sessionManager.showRecoveryPrompt = true
             }
-            // Phase 1: Show welcome sheet on first launch
             if !hasCompletedOnboarding {
-                showWelcomeSheet = true
+                overlayCoordinator.showWelcomeSheet = true
             }
         }
-        // P1-7: When the active profile changes AFTER initial setup, migrate open tabs.
-        // onReceive fires immediately on subscription with the current value — we skip that
-        // first emission to avoid closing the initial tab created by setup(dataStore:).
-        // Migration only runs when the profile ID genuinely changes.
-        .onReceive(viewModel.profileManager.$activeProfile
-            .dropFirst()  // Skip initial emission — not a real profile switch
-        ) { newProfile in
+        .onReceive(viewModel.profileManager.$activeProfile.dropFirst()) { newProfile in
             let newStore = viewModel.profileManager.websiteDataStore(for: newProfile)
             viewModel.tabManager.migrateToNewProfile(
                 dataStore: newStore,
@@ -320,76 +312,81 @@ public struct ContentView: View {
             )
         }
         .onReceive(viewModel.tabManager.$tabs) { tabs in
-            mindEngine.analyzeBrowserState(tabs: tabs)
+            environment.mindEngine.analyzeBrowserState(tabs: tabs)
         }
-
-        .sheet(isPresented: $showWelcomeSheet) {
+        .sheet(isPresented: $overlayCoordinator.showWelcomeSheet) {
             HoloWelcomeView {
                 hasCompletedOnboarding = true
-                showWelcomeSheet = false
+                overlayCoordinator.showWelcomeSheet = false
             }
         }
-        .sheet(isPresented: $showFeedbackSheet) {
+        .sheet(isPresented: $overlayCoordinator.showFeedbackSheet) {
             FeedbackSheetView()
         }
-        .sheet(isPresented: $showImportWizardSheet) {
+        .sheet(isPresented: $overlayCoordinator.showImportWizardSheet) {
             BrowserImportWizardView(
                 bookmarkManager: viewModel.bookmarkManager,
-                historyStore: historyStore,
-                onDismiss: { showImportWizardSheet = false }
+                historyStore: environment.historyStore,
+                onDismiss: { overlayCoordinator.showImportWizardSheet = false }
             )
         }
-        .sheet(isPresented: $mindEngine.isPanelVisible) {
+        .sheet(isPresented: Binding(
+            get: { environment.mindEngine.isPanelVisible },
+            set: { environment.mindEngine.isPanelVisible = $0 }
+        )) {
             HoloMindDashboardView(
-                mindEngine: mindEngine,
+                mindEngine: environment.mindEngine,
                 currentProfileID: viewModel.profileManager.activeProfile.id,
                 isPrivateMode: viewModel.profileManager.activeProfile.isPrivate,
-                onDismiss: { mindEngine.isPanelVisible = false }
+                onDismiss: { environment.mindEngine.isPanelVisible = false }
             )
+        }
+        .sheet(isPresented: $overlayCoordinator.showAboutSheet) {
+            AboutHoloBrowserView()
+        }
+        .sheet(isPresented: $overlayCoordinator.showDogfoodSheet) {
+            DogfoodSheetView(viewModel: viewModel)
         }
         .onReceive(viewModel.$currentURL) { url in
             if let url = url, let title = viewModel.tabManager.activeTab?.title {
                 let isPrivate = viewModel.profileManager.activeProfile.isPrivate
-                historyStore.addEntry(url: url, title: title, isPrivate: isPrivate)
+                environment.historyStore.addEntry(url: url, title: title, isPrivate: isPrivate)
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("HoloQuickActionSummarize"))) { _ in
-            mindEngine.executeQuickAction(.summarizePage, context: "Triggered from Context Menu", profile: viewModel.profileManager.activeProfile)
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("HoloQuickActionSaveMemory"))) { _ in
-            mindEngine.executeQuickAction(.saveToMemory, context: "Selected text from Context Menu", profile: viewModel.profileManager.activeProfile)
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("HoloSmartSearchAI"))) { notification in
-            if let _ = notification.object as? String {
-                mindEngine.isPanelVisible = true
+        .onReceive(environment.eventBus.publisher) { event in
+            switch event {
+            case .openSettings:
+                SettingsWindowController.shared.open(viewModel: viewModel, privacyManager: environment.privacyManager)
+            case .openAbout:
+                overlayCoordinator.showAboutSheet = true
+            case .openFeedback:
+                overlayCoordinator.showFeedbackSheet = true
+            case .openDogfood:
+                overlayCoordinator.showDogfoodSheet = true
+            case .openImportWizard:
+                overlayCoordinator.showImportWizardSheet = true
+            case .newTabShortcut:
+                viewModel.createNewTab()
+            case .quickActionSummarize:
+                if let webView = viewModel.tabManager.activeTab?.webView {
+                    environment.mindEngine.summarizePage(
+                        webView: webView,
+                        aiManager: environment.aiManager,
+                        profile: viewModel.profileManager.activeProfile
+                    )
+                } else {
+                    environment.mindEngine.isPanelVisible = true
+                }
+            case .quickActionSaveMemory:
+                environment.mindEngine.executeQuickAction(.saveToMemory, context: "Selected text from Context Menu", profile: viewModel.profileManager.activeProfile)
+            case .smartSearchAI:
+                environment.mindEngine.isPanelVisible = true
+            case .smartSearchMission(let query):
+                environment.mindEngine.assignGoal(title: query, category: .research)
+                environment.mindEngine.isPanelVisible = true
+            default:
+                break
             }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("HoloSmartSearchMission"))) { notification in
-            if let query = notification.object as? String {
-                mindEngine.assignGoal(title: query, category: .research)
-                mindEngine.isPanelVisible = true
-            }
-        }
-        .sheet(isPresented: $showAboutSheet) {
-            AboutHoloBrowserView()
-        }
-        .sheet(isPresented: $showDogfoodSheet) {
-            DogfoodSheetView(viewModel: viewModel)
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("HoloOpenAbout"))) { _ in
-            showAboutSheet = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("HoloOpenFeedback"))) { _ in
-            showFeedbackSheet = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("HoloOpenDogfood"))) { _ in
-            showDogfoodSheet = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("HoloOpenSettings"))) { _ in
-            SettingsWindowController.shared.open(viewModel: viewModel, privacyManager: privacyManager)
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("HoloNewTabShortcut"))) { _ in
-            viewModel.createNewTab()
         }
     }
 }
@@ -420,7 +417,7 @@ private struct KeyboardShortcutHandlerView: View {
             
             // Cmd + L: Focus Address Bar
             Button("") {
-                NotificationCenter.default.post(name: .focusAddressBar, object: nil)
+                HoloEventBus.shared.post(.focusAddressBar)
             }
             .keyboardShortcut("l", modifiers: [.command])
             .opacity(0)
@@ -435,8 +432,6 @@ private struct KeyboardShortcutHandlerView: View {
             .opacity(0)
             
             // Cmd + Shift + T: Restore Closed Tab
-            // P1-1: Pass the active profile's data store so the restored tab uses the correct
-            // profile isolation — recentlyClosedTabs now tracks profileID per entry.
             Button("") {
                 viewModel.tabManager.restoreRecentlyClosedTab(
                     dataStore: viewModel.profileManager.activeWebsiteDataStore

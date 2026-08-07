@@ -1,14 +1,16 @@
 import SwiftUI
 import AppKit
 
-// MARK: - Liquid Glass Multi-Layer Rendering Pipeline (Apple visionOS & macOS Sonoma Standard)
+// MARK: - 6-Layer Apple Sheer Crystal Liquid Glass Multi-Layer Pipeline
 
-/// Interactive Glass Card Modifier featuring continuous mouse tracking, optical refraction, specular rim lighting, and chromatic caustics.
+/// Interactive Glass Card Modifier featuring continuous cursor light tracking, sheer translucency (22-38%),
+/// top-left white specular highlights, and dynamic prismatic rainbow edge dispersion.
 public struct HoloGlassCardModifier: ViewModifier {
     let cornerRadius: CGFloat
     let isHoveredBase: Bool
     let padding: CGFloat
     
+    @ObservedObject private var lightingEngine = HoloGlassLightingEngine.shared
     @State private var mousePosition: CGPoint? = nil
     @State private var isHovering: Bool = false
 
@@ -24,28 +26,36 @@ public struct HoloGlassCardModifier: ViewModifier {
                     let my = mousePosition?.y ?? bounds.height / 2
                     
                     ZStack {
-                        // 1. Native macOS Behind-Window Vibrancy Layer
-                        VisualEffectViewWrapper(material: .sidebar, blendingMode: .behindWindow)
+                        // Layer 1: Background Blur Layer (Behind-Window Vibrancy)
+                        VisualEffectViewWrapper(material: .popover, blendingMode: .behindWindow)
                         
-                        // 2. Optical Glass Fill (Sheer 0.08 opacity for crystal visibility)
+                        // Layer 2: Frost / Transparency Layer (Sheer 22% / 36% white fill)
                         RoundedRectangle(cornerRadius: cornerRadius)
-                            .fill(hover ? Color.white.opacity(0.12) : Color.white.opacity(0.06))
+                            .fill(hover ? Color.white.opacity(0.36) : Color.white.opacity(0.22))
                         
-                        // 3. Dynamic Interactive Refraction Beam on Hover
+                        // Layer 3: Internal Tint Layer (Soft ice blue specular cast)
+                        RoundedRectangle(cornerRadius: cornerRadius)
+                            .fill(HoloTheme.Palette.iceBlue.opacity(hover ? 0.12 : 0.04))
+                        
+                        // Layer 4: Dynamic Interactive Specular Refraction Beam on Hover
                         if hover {
                             RadialGradient(
                                 gradient: Gradient(colors: [
-                                    Color.white.opacity(0.25),
-                                    HoloTheme.Palette.holoCyan.opacity(0.15),
+                                    Color.white.opacity(0.65),
+                                    HoloTheme.Palette.holoCyan.opacity(0.18),
+                                    HoloTheme.Palette.holoViolet.opacity(0.08),
                                     .clear
                                 ]),
                                 center: UnitPoint(x: mx / max(bounds.width, 1), y: my / max(bounds.height, 1)),
                                 startRadius: 0,
-                                endRadius: max(bounds.width, bounds.height) * 0.75
+                                endRadius: max(bounds.width, bounds.height) * 0.85
                             )
                             .blendMode(.screen)
                             .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
                         }
+                    }
+                    .onAppear {
+                        lightingEngine.updateCursorPosition(CGPoint(x: mx, y: my), in: bounds)
                     }
                 }
             )
@@ -61,43 +71,40 @@ public struct HoloGlassCardModifier: ViewModifier {
                     let chromaticY = hover ? dy * 2.0 : 0
                     
                     ZStack {
-                        // 4. Top-Left Specular Light Rim Catch (Simulates studio light reflecting on physical glass edge)
+                        // Layer 5: Top-Left Pure White Specular Light Rim & Iridescent Catch
                         RoundedRectangle(cornerRadius: cornerRadius)
                             .stroke(
                                 hover ?
+                                HoloTheme.Palette.glassBorderGradient :
                                 LinearGradient(
-                                    colors: [Color.white.opacity(0.85), Color.cyan.opacity(0.50), Color.purple.opacity(0.35), Color.white.opacity(0.20)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ) :
-                                LinearGradient(
-                                    colors: [Color.white.opacity(0.45), Color.white.opacity(0.15), Color.clear],
+                                    colors: [Color.white.opacity(0.80), Color.white.opacity(0.35), HoloTheme.Palette.holoCyan.opacity(0.18)],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 ),
                                 lineWidth: 1.0
                             )
                         
-                        // 5. Chromatic Dispersion Prism Sheen on Mouse Interaction
+                        // Prism dispersion sheen on hover interaction
                         if hover {
                             RoundedRectangle(cornerRadius: cornerRadius)
-                                .stroke(HoloTheme.Palette.holoCyan.opacity(0.35), lineWidth: 0.5)
+                                .stroke(HoloTheme.Palette.holoCyan.opacity(0.30), lineWidth: 0.5)
                                 .offset(x: chromaticX, y: chromaticY)
                                 .blendMode(.screen)
                             
                             RoundedRectangle(cornerRadius: cornerRadius)
-                                .stroke(HoloTheme.Palette.holoMagenta.opacity(0.35), lineWidth: 0.5)
+                                .stroke(HoloTheme.Palette.holoPink.opacity(0.25), lineWidth: 0.5)
                                 .offset(x: -chromaticX, y: -chromaticY)
                                 .blendMode(.screen)
                         }
                     }
                 }
             )
+            // Layer 6: Delicate Elevation Drop Shadow
             .shadow(
-                color: hover ? HoloTheme.Glow.cyan.opacity(0.5) : Color.black.opacity(0.18),
-                radius: hover ? 20 : 10,
+                color: hover ? HoloTheme.Glow.cyan.opacity(0.25) : Color.black.opacity(0.04),
+                radius: hover ? 12 : 5,
                 x: 0,
-                y: hover ? 6 : 3
+                y: hover ? 3 : 1
             )
             .onContinuousHover { phase in
                 switch phase {
@@ -125,14 +132,14 @@ public struct HoloGlassBackgroundModifier: ViewModifier {
                 ZStack {
                     VisualEffectViewWrapper(material: material, blendingMode: .behindWindow)
                     RoundedRectangle(cornerRadius: cornerRadius)
-                        .fill(Color.white.opacity(0.06))
+                        .fill(Color.white.opacity(0.25))
                 }
                 .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
                 .overlay(
                     RoundedRectangle(cornerRadius: cornerRadius)
                         .stroke(
                             LinearGradient(
-                                colors: [Color.white.opacity(0.45), Color.white.opacity(0.12)],
+                                colors: [Color.white.opacity(0.80), HoloTheme.Palette.holoCyan.opacity(0.25), Color.white.opacity(0.20)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             ),
@@ -143,19 +150,20 @@ public struct HoloGlassBackgroundModifier: ViewModifier {
     }
 }
 
-// MARK: - View Extension Glass Modifiers
+// MARK: - View Extension Glass Modifiers (5 Sheer Apple Crystal Material Tiers)
 
 public extension View {
     func holoGlassCard(cornerRadius: CGFloat = 12, isHovered: Bool = false, padding: CGFloat = 12) -> some View {
         self.modifier(HoloGlassCardModifier(cornerRadius: cornerRadius, isHoveredBase: isHovered, padding: padding))
     }
     
-    func holoGlassBackground(material: NSVisualEffectView.Material = .sidebar, cornerRadius: CGFloat = 10) -> some View {
+    func holoGlassBackground(material: NSVisualEffectView.Material = .popover, cornerRadius: CGFloat = 10) -> some View {
         self.modifier(HoloGlassBackgroundModifier(material: material, cornerRadius: cornerRadius))
     }
     
-    func holoUltraGlass(cornerRadius: CGFloat = 12) -> some View {
-        let tier = HoloDesign.GlassTier.holoClear
+    /// Tier 1: Crystal Glass (Toolbar, Tab Bar, Navigation surfaces — Level 2, 14% fill)
+    func holoCrystalGlass(cornerRadius: CGFloat = 12) -> some View {
+        let tier = HoloDesign.MaterialTier.crystalGlass
         return self.background(
             ZStack {
                 VisualEffectViewWrapper(material: tier.material, blendingMode: .behindWindow)
@@ -171,8 +179,9 @@ public extension View {
         )
     }
     
-    func holoCrystalGlass(cornerRadius: CGFloat = 12) -> some View {
-        let tier = HoloDesign.GlassTier.holoGlass
+    /// Tier 2: Clear Glass (Buttons, Small controls, Floating controls — Level 2/3, 20% fill)
+    func holoClearGlass(cornerRadius: CGFloat = 12) -> some View {
+        let tier = HoloDesign.MaterialTier.clearGlass
         return self.background(
             ZStack {
                 VisualEffectViewWrapper(material: tier.material, blendingMode: .behindWindow)
@@ -182,9 +191,72 @@ public extension View {
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius)
-                    .stroke(tier.specularRimGradient, lineWidth: 1)
+                    .stroke(tier.specularRimGradient, lineWidth: 1.0)
+            )
+            .shadow(color: tier.shadowColor, radius: tier.shadowRadius, y: 2)
+        )
+    }
+    
+    /// Tier 3: Frost Glass (Sidebars, Cards, Settings panels — Level 3, 32% fill)
+    func holoFrostGlass(cornerRadius: CGFloat = 16) -> some View {
+        let tier = HoloDesign.MaterialTier.frostGlass
+        return self.background(
+            ZStack {
+                VisualEffectViewWrapper(material: tier.material, blendingMode: .behindWindow)
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .fill(Color.white.opacity(tier.opacity))
+            }
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .stroke(tier.specularRimGradient, lineWidth: 1.0)
             )
             .shadow(color: tier.shadowColor, radius: tier.shadowRadius, y: 4)
+        )
+    }
+    
+    /// Tier 4: Deep Glass (Popovers, Context Menus, Dropdowns — Level 4, 48% fill)
+    func holoDeepGlass(cornerRadius: CGFloat = 18) -> some View {
+        let tier = HoloDesign.MaterialTier.deepGlass
+        return self.background(
+            ZStack {
+                VisualEffectViewWrapper(material: tier.material, blendingMode: .behindWindow)
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .fill(Color.white.opacity(tier.opacity))
+            }
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .stroke(tier.specularRimGradient, lineWidth: 1.0)
+            )
+            .shadow(color: tier.shadowColor, radius: tier.shadowRadius, y: 6)
+        )
+    }
+    
+    /// Tier 5: Holo Glass (HoloMind surfaces & Vision Pro spatial cards — Level 5, 58% fill)
+    func holoHoloGlass(cornerRadius: CGFloat = 18) -> some View {
+        let tier = HoloDesign.MaterialTier.holoGlass
+        return self.background(
+            ZStack {
+                VisualEffectViewWrapper(material: tier.material, blendingMode: .behindWindow)
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .fill(Color.white.opacity(tier.opacity))
+                
+                RadialGradient(
+                    colors: [HoloTheme.Palette.iceBlue.opacity(0.30), HoloTheme.Palette.holoCyan.opacity(0.15), HoloTheme.Palette.holoViolet.opacity(0.08), .clear],
+                    center: .topLeading,
+                    startRadius: 0,
+                    endRadius: 320
+                )
+                .blendMode(.screen)
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+            }
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .stroke(tier.specularRimGradient, lineWidth: 1.2)
+            )
+            .shadow(color: HoloTheme.Glow.cyan.opacity(0.18), radius: tier.shadowRadius, y: 6)
         )
     }
     
@@ -195,108 +267,38 @@ public extension View {
     }
     
     func holoDarkGlass(cornerRadius: CGFloat = 12) -> some View {
-        let tier = HoloDesign.GlassTier.holoFrost
+        self.holoFrostGlass(cornerRadius: cornerRadius)
+    }
+    
+    func holoGlassTier(cornerRadius: CGFloat = 14, isHovered: Bool = false) -> some View {
+        let tier = HoloDesign.MaterialTier.crystalGlass
         return self.background(
             ZStack {
                 VisualEffectViewWrapper(material: tier.material, blendingMode: .behindWindow)
                 RoundedRectangle(cornerRadius: cornerRadius)
-                    .fill(Color.black.opacity(tier.opacity))
+                    .fill(isHovered ? Color.white.opacity(0.32) : Color.white.opacity(tier.opacity))
+                
+                if isHovered {
+                    RadialGradient(
+                        colors: [Color.white.opacity(0.45), HoloTheme.Palette.holoCyan.opacity(0.15), .clear],
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: 180
+                    )
+                    .blendMode(.screen)
+                    .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+                }
             }
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius)
-                    .stroke(tier.specularRimGradient, lineWidth: 1)
+                    .stroke(isHovered ? HoloTheme.Palette.glassBorderGradient : tier.specularRimGradient, lineWidth: 1.0)
             )
-            .shadow(color: tier.shadowColor, radius: tier.shadowRadius, y: 6)
+            .shadow(color: isHovered ? HoloTheme.Glow.cyan.opacity(0.20) : tier.shadowColor, radius: isHovered ? 12 : tier.shadowRadius, y: isHovered ? 2 : 1)
         )
     }
     
-    // MARK: - 4-Tier Liquid Glass Modifiers (Apple visionOS & macOS Sonoma Standard)
-    
-    /// Tier 1: HoloClear (Ultra-clear optical glass lens for Address Bar & Search Pills)
-    func holoClearGlass(cornerRadius: CGFloat = 12) -> some View {
-        let tier = HoloDesign.GlassTier.holoClear
-        return self
-            .background(
-                ZStack {
-                    VisualEffectViewWrapper(material: tier.material, blendingMode: .behindWindow)
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                        .fill(Color.white.opacity(tier.opacity))
-                }
-                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-                .overlay(
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                        .stroke(tier.specularRimGradient, lineWidth: 1.0)
-                )
-                .shadow(color: tier.shadowColor, radius: tier.shadowRadius, y: 2)
-            )
-    }
-    
-    /// Tier 2: HoloGlass (Main UI Chrome material for Floating Tab Bar, Navigation Toolbar, Floating Panels)
-    func holoGlassTier(cornerRadius: CGFloat = 14, isHovered: Bool = false) -> some View {
-        let tier = HoloDesign.GlassTier.holoGlass
-        return self
-            .background(
-                ZStack {
-                    VisualEffectViewWrapper(material: tier.material, blendingMode: .behindWindow)
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                        .fill(isHovered ? Color.white.opacity(0.14) : Color.white.opacity(tier.opacity))
-                    
-                    if isHovered {
-                        RadialGradient(
-                            colors: [HoloTheme.Palette.holoCyan.opacity(0.20), .clear],
-                            center: .center,
-                            startRadius: 0,
-                            endRadius: 180
-                        )
-                        .blendMode(.screen)
-                        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-                    }
-                }
-                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-                .overlay(
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                        .stroke(isHovered ? HoloTheme.Palette.glassBorderGradient : tier.specularRimGradient, lineWidth: 1.0)
-                )
-                .shadow(color: isHovered ? HoloTheme.Glow.cyan.opacity(0.4) : tier.shadowColor, radius: isHovered ? 20 : tier.shadowRadius, y: isHovered ? 6 : 4)
-            )
-    }
-    
-    /// Tier 3: HoloFrost (High-contrast control surfaces for Sidebars, Popovers, Dock Cards)
-    func holoFrostGlass(cornerRadius: CGFloat = 16) -> some View {
-        let tier = HoloDesign.GlassTier.holoFrost
-        return self
-            .background(
-                ZStack {
-                    VisualEffectViewWrapper(material: tier.material, blendingMode: .behindWindow)
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                        .fill(Color.white.opacity(tier.opacity))
-                }
-                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-                .overlay(
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                        .stroke(tier.specularRimGradient, lineWidth: 1.0)
-                )
-                .shadow(color: tier.shadowColor, radius: tier.shadowRadius, y: 6)
-            )
-    }
-    
-    /// Tier 4: HoloSolid (Elevated Dialogs, Settings Windows, Modal Cards)
     func holoSolidGlass(cornerRadius: CGFloat = 18) -> some View {
-        let tier = HoloDesign.GlassTier.holoSolid
-        return self
-            .background(
-                ZStack {
-                    VisualEffectViewWrapper(material: tier.material, blendingMode: .behindWindow)
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                        .fill(Color.black.opacity(tier.opacity))
-                }
-                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-                .overlay(
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                        .stroke(tier.specularRimGradient, lineWidth: 1.0)
-                )
-                .shadow(color: tier.shadowColor, radius: tier.shadowRadius, y: 10)
-            )
+        self.holoDeepGlass(cornerRadius: cornerRadius)
     }
 }

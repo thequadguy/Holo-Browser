@@ -1,4 +1,16 @@
 // swift-tools-version: 5.10
+// ─────────────────────────────────────────────────────────────────────────────
+// RUNNING TESTS
+// Tests require Xcode.app (not just Command Line Tools) because XCTest.framework
+// is only shipped with Xcode, not with the standalone xctools package.
+//
+// From the command line:
+//   sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+//   swift test
+//
+// From Xcode:
+//   Open HoloBrowser.xcworkspace → Cmd+U
+// ─────────────────────────────────────────────────────────────────────────────
 import PackageDescription
 
 let package = Package(

@@ -146,7 +146,9 @@ public struct HoloStartPageView: View {
                             icon: "doc.text.magnifyingglass",
                             actionTitle: "Summarize"
                         ) {
-                            mindEngine.executeQuickAction(.summarizePage, context: "Open Tab Cluster", profile: BrowserProfile(name: "Default", isPrivate: false))
+                            // Open HoloMind panel — user triggers summarization from the active tab
+                            // using the toolbar AI button or right-click menu.
+                            mindEngine.isPanelVisible = true
                         }
                         
                         aiSuggestionCard(

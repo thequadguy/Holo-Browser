@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Reusable glassmorphic UI elements for Holo Browser.
+/// Reusable Liquid Glass UI components for Holo Browser V1.4.
 
 public struct HoloGlassButton: View {
     let title: String
@@ -39,16 +39,17 @@ public struct HoloGlassButton: View {
                     if isProminent {
                         HoloTheme.Palette.heroGradient
                     } else {
-                        isHovered ? Color.gray.opacity(0.2) : Color.gray.opacity(0.1)
+                        isHovered ? Color.white.opacity(0.35) : Color.white.opacity(0.18)
                     }
                 }
             )
-            .foregroundColor(isProminent ? .white : .primary)
+            .foregroundColor(isProminent ? .white : HoloTheme.Text.primary)
             .clipShape(RoundedRectangle(cornerRadius: 8))
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
-                    .stroke(isProminent ? Color.white.opacity(0.3) : Color.gray.opacity(0.2), lineWidth: 1)
+                    .stroke(isProminent ? Color.white.opacity(0.50) : (isHovered ? Color.white.opacity(0.45) : Color.white.opacity(0.25)), lineWidth: 1)
             )
+            .shadow(color: isHovered ? HoloTheme.Glow.cyan.opacity(0.3) : Color.black.opacity(0.04), radius: isHovered ? 8 : 2, y: 1)
             .scaleEffect(isHovered ? 1.02 : 1.0)
             .animation(HoloTheme.Animations.springSnappy, value: isHovered)
         }
@@ -74,9 +75,9 @@ public struct HoloPrimaryButtonStyle: ButtonStyle {
             .clipShape(RoundedRectangle(cornerRadius: 8))
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color.white.opacity(0.4), lineWidth: 1)
+                    .stroke(Color.white.opacity(0.55), lineWidth: 1)
             )
-            .shadow(color: isHovered ? HoloTheme.Glow.cyan.opacity(0.5) : Color.black.opacity(0.3), radius: isHovered ? 8 : 4, y: 2)
+            .shadow(color: isHovered ? HoloTheme.Glow.cyan.opacity(0.45) : Color.black.opacity(0.08), radius: isHovered ? 12 : 4, y: 2)
             .scaleEffect(configuration.isPressed ? 0.96 : (isHovered ? 1.02 : 1.0))
             .animation(HoloTheme.Animations.springSnappy, value: isHovered)
             .animation(HoloTheme.Animations.easeOutFast, value: configuration.isPressed)
@@ -94,12 +95,12 @@ public struct HoloSecondaryButtonStyle: ButtonStyle {
             .font(.system(size: 13, weight: .medium))
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
-            .background(isHovered ? Color.white.opacity(0.15) : Color.white.opacity(0.05))
-            .foregroundColor(.primary)
+            .background(isHovered ? Color.white.opacity(0.35) : Color.white.opacity(0.18))
+            .foregroundColor(HoloTheme.Text.primary)
             .clipShape(RoundedRectangle(cornerRadius: 8))
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
-                    .stroke(isHovered ? Color.white.opacity(0.3) : Color.white.opacity(0.15), lineWidth: 1)
+                    .stroke(isHovered ? Color.white.opacity(0.50) : Color.white.opacity(0.28), lineWidth: 1)
             )
             .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
             .animation(HoloTheme.Animations.springSnappy, value: isHovered)
@@ -142,8 +143,8 @@ public struct HoloShortcutBadge: View {
             .font(.system(size: 10, weight: .bold, design: .monospaced))
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
-            .background(Color.gray.opacity(0.18))
-            .foregroundColor(.secondary)
+            .background(Color.white.opacity(0.25))
+            .foregroundColor(HoloTheme.Text.secondary)
             .cornerRadius(4)
     }
 }

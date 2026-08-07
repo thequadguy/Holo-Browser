@@ -143,7 +143,7 @@ public struct AISidebarView: View {
         }
         .frame(width: sidebarWidth)
         .background(
-            VisualEffectViewWrapper(material: .sidebar, blendingMode: .withinWindow)
+            VisualEffectViewWrapper(material: .popover, blendingMode: .withinWindow)
         )
         .overlay(
             Divider(), alignment: .leading

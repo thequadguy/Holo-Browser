@@ -14,6 +14,7 @@ public struct DownloadItem: Identifiable, Equatable {
     public var estimatedTimeRemaining: String
     public var isFailed: Bool
     public var errorMessage: String?
+    public var startTime: Date
     
     public init(
         id: UUID = UUID(),
@@ -26,7 +27,8 @@ public struct DownloadItem: Identifiable, Equatable {
         downloadSpeed: String = "",
         estimatedTimeRemaining: String = "",
         isFailed: Bool = false,
-        errorMessage: String? = nil
+        errorMessage: String? = nil,
+        startTime: Date = Date()
     ) {
         self.id = id
         self.filename = filename
@@ -39,6 +41,7 @@ public struct DownloadItem: Identifiable, Equatable {
         self.estimatedTimeRemaining = estimatedTimeRemaining
         self.isFailed = isFailed
         self.errorMessage = errorMessage
+        self.startTime = startTime
     }
 }
 
@@ -60,7 +63,7 @@ public final class DownloadManager: NSObject, ObservableObject, WKDownloadDelega
         downloads.removeAll(where: { $0.isFinished })
     }
     
-    // MARK: - Download Management Features (Phase 4)
+    // MARK: - Download Management Features
     
     public func openDownloadFolder() {
         let downloadsFolder = (FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first ?? URL(fileURLWithPath: NSTemporaryDirectory())).standardized
@@ -69,6 +72,39 @@ public final class DownloadManager: NSObject, ObservableObject, WKDownloadDelega
     
     public func removeDownloadRecord(id: UUID) {
         downloads.removeAll(where: { $0.id == id })
+    }
+    
+    public func updateProgress(id: UUID, bytesDownloaded: Int64, totalBytes: Int64) {
+        guard let idx = downloads.firstIndex(where: { $0.id == id }) else { return }
+        var item = downloads[idx]
+        item.bytesDownloaded = bytesDownloaded
+        item.totalBytes = totalBytes
+        item.progress = totalBytes > 0 ? Double(bytesDownloaded) / Double(totalBytes) : 0.5
+        
+        let elapsed = max(Date().timeIntervalSince(item.startTime), 0.1)
+        let bytesPerSec = Double(bytesDownloaded) / elapsed
+        
+        if bytesPerSec > 1_048_576 {
+            item.downloadSpeed = String(format: "%.1f MB/s", bytesPerSec / 1_048_576.0)
+        } else if bytesPerSec > 1024 {
+            item.downloadSpeed = String(format: "%.0f KB/s", bytesPerSec / 1024.0)
+        } else {
+            item.downloadSpeed = String(format: "%d B/s", Int64(bytesPerSec))
+        }
+        
+        if totalBytes > bytesDownloaded && bytesPerSec > 0 {
+            let remainingBytes = totalBytes - bytesDownloaded
+            let remainingSecs = Int(Double(remainingBytes) / bytesPerSec)
+            if remainingSecs < 60 {
+                item.estimatedTimeRemaining = "\(remainingSecs)s remaining"
+            } else {
+                item.estimatedTimeRemaining = "\(remainingSecs / 60)m remaining"
+            }
+        } else {
+            item.estimatedTimeRemaining = ""
+        }
+        
+        downloads[idx] = item
     }
     
     // MARK: - WKDownloadDelegate
@@ -100,8 +136,18 @@ public final class DownloadManager: NSObject, ObservableObject, WKDownloadDelega
             counter += 1
         }
         
+        let expectedLength = response.expectedContentLength
+        
         Task { @MainActor in
-            let item = DownloadItem(filename: finalURL.lastPathComponent, destinationURL: finalURL, isFinished: false, progress: 0.5)
+            let item = DownloadItem(
+                filename: finalURL.lastPathComponent,
+                destinationURL: finalURL,
+                isFinished: false,
+                progress: 0.1,
+                totalBytes: expectedLength > 0 ? expectedLength : 0,
+                downloadSpeed: "Calculating...",
+                startTime: Date()
+            )
             self.activeTasks[download] = item.id
             self.downloads.insert(item, at: 0)
         }
@@ -118,6 +164,8 @@ public final class DownloadManager: NSObject, ObservableObject, WKDownloadDelega
                 var finished = self.downloads[idx]
                 finished.isFinished = true
                 finished.progress = 1.0
+                finished.downloadSpeed = "Complete"
+                finished.estimatedTimeRemaining = ""
                 self.downloads[idx] = finished
                 self.lastCompletedDownload = finished.destinationURL
             }
@@ -126,7 +174,15 @@ public final class DownloadManager: NSObject, ObservableObject, WKDownloadDelega
     
     nonisolated public func download(_ download: WKDownload, didFailWithError error: Error, resumeData: Data?) {
         Task { @MainActor in
+            guard let id = self.activeTasks[download] else { return }
             self.activeTasks.removeValue(forKey: download)
+            if let idx = self.downloads.firstIndex(where: { $0.id == id }) {
+                var failed = self.downloads[idx]
+                failed.isFailed = true
+                failed.errorMessage = error.localizedDescription
+                failed.downloadSpeed = "Failed"
+                self.downloads[idx] = failed
+            }
         }
     }
 }

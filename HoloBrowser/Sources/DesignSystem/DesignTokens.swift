@@ -1,93 +1,76 @@
 import SwiftUI
 import AppKit
 
-/// Central design system tokens for Holo Browser (Colors, Typography, Spacing, Animations).
+/// Central design system tokens for Holo Browser (5 Sheer Apple Crystal Material Tiers, Typography, Spacing, Animations).
 public enum HoloDesign {
     
-    // MARK: - Liquid Glass Tier System (Apple visionOS & macOS Sonoma Calibrated)
-    public enum GlassTier {
-        case holoClear
-        case holoGlass
-        case holoFrost
-        case holoSolid
+    // MARK: - 5 Sheer Apple Crystal Material Tiers (Apple Vision Pro Spatial Standards)
+    public enum MaterialTier {
+        case crystalGlass  // Level 2: Toolbar, Tab bar, Navigation surfaces (14% fill)
+        case clearGlass    // Level 2/3: Buttons, Small controls, Floating controls (20% fill)
+        case frostGlass    // Level 3: Sidebars, Cards, Settings panels (32% fill)
+        case deepGlass     // Level 4: Popovers, Context Menus, Dropdowns (48% fill)
+        case holoGlass     // Level 5: HoloMind AI surfaces & Vision Pro spatial cards (58% fill)
         
         public var opacity: Double {
             switch self {
-            case .holoClear: return 0.04
-            case .holoGlass: return 0.08
-            case .holoFrost: return 0.14
-            case .holoSolid: return 0.32
+            case .crystalGlass: return 0.14
+            case .clearGlass: return 0.20
+            case .frostGlass: return 0.32
+            case .deepGlass: return 0.48
+            case .holoGlass: return 0.58
             }
         }
         
         public var blurRadius: CGFloat {
             switch self {
-            case .holoClear: return 16
-            case .holoGlass: return 28
-            case .holoFrost: return 40
-            case .holoSolid: return 52
-            }
-        }
-        
-        public var saturation: Double {
-            switch self {
-            case .holoClear: return 1.40
-            case .holoGlass: return 1.60
-            case .holoFrost: return 1.25
-            case .holoSolid: return 1.05
-            }
-        }
-        
-        public var brightness: Double {
-            switch self {
-            case .holoClear: return 1.15
-            case .holoGlass: return 1.08
-            case .holoFrost: return 1.02
-            case .holoSolid: return 0.98
+            case .crystalGlass: return 20
+            case .clearGlass: return 28
+            case .frostGlass: return 42
+            case .deepGlass: return 54
+            case .holoGlass: return 66
             }
         }
         
         public var material: NSVisualEffectView.Material {
             switch self {
-            case .holoClear: return .hudWindow
-            case .holoGlass: return .sidebar
-            case .holoFrost: return .popover
-            case .holoSolid: return .menu
-            }
-        }
-        
-        public var borderColor: Color {
-            switch self {
-            case .holoClear: return Color.white.opacity(0.35)
-            case .holoGlass: return Color.white.opacity(0.40)
-            case .holoFrost: return Color.white.opacity(0.45)
-            case .holoSolid: return Color.white.opacity(0.50)
+            case .crystalGlass: return .popover
+            case .clearGlass: return .titlebar
+            case .frostGlass: return .popover
+            case .deepGlass: return .popover
+            case .holoGlass: return .menu
             }
         }
         
         public var specularRimGradient: LinearGradient {
             switch self {
-            case .holoClear:
+            case .crystalGlass:
                 return LinearGradient(
-                    colors: [Color.white.opacity(0.65), Color.white.opacity(0.20), Color.cyan.opacity(0.30), Color.white.opacity(0.10)],
+                    colors: [Color.white.opacity(0.85), Color.white.opacity(0.40), HoloTheme.Palette.holoCyan.opacity(0.25), Color.white.opacity(0.15)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            case .clearGlass:
+                return LinearGradient(
+                    colors: [Color.white.opacity(0.88), HoloTheme.Palette.holoCyan.opacity(0.30), Color.white.opacity(0.20)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            case .frostGlass:
+                return LinearGradient(
+                    colors: [Color.white.opacity(0.90), HoloTheme.Palette.holoCyan.opacity(0.32), HoloTheme.Palette.holoViolet.opacity(0.20), Color.white.opacity(0.22)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            case .deepGlass:
+                return LinearGradient(
+                    colors: [Color.white.opacity(0.92), HoloTheme.Palette.holoCyan.opacity(0.35), HoloTheme.Palette.holoPink.opacity(0.25), Color.white.opacity(0.25)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
             case .holoGlass:
                 return LinearGradient(
-                    colors: [Color.white.opacity(0.70), Color.cyan.opacity(0.35), Color.purple.opacity(0.25), Color.white.opacity(0.15)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            case .holoFrost:
-                return LinearGradient(
-                    colors: [Color.white.opacity(0.75), Color.cyan.opacity(0.40), HoloTheme.Palette.holoMagenta.opacity(0.30), Color.white.opacity(0.20)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            case .holoSolid:
-                return LinearGradient(
-                    colors: [Color.white.opacity(0.80), Color.white.opacity(0.35), Color.cyan.opacity(0.25), Color.white.opacity(0.15)],
+                    colors: [Color.white.opacity(0.95), HoloTheme.Palette.holoCyan.opacity(0.40), HoloTheme.Palette.holoViolet.opacity(0.30), HoloTheme.Palette.holoPink.opacity(0.20)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -96,32 +79,37 @@ public enum HoloDesign {
         
         public var shadowColor: Color {
             switch self {
-            case .holoClear: return Color.black.opacity(0.12)
-            case .holoGlass: return Color.black.opacity(0.18)
-            case .holoFrost: return Color.black.opacity(0.30)
-            case .holoSolid: return Color.black.opacity(0.45)
+            case .crystalGlass: return Color.black.opacity(0.03)
+            case .clearGlass: return Color.black.opacity(0.04)
+            case .frostGlass: return Color.black.opacity(0.05)
+            case .deepGlass: return Color.black.opacity(0.07)
+            case .holoGlass: return Color.black.opacity(0.10)
             }
         }
         
         public var shadowRadius: CGFloat {
             switch self {
-            case .holoClear: return 8
-            case .holoGlass: return 18
-            case .holoFrost: return 28
-            case .holoSolid: return 40
+            case .crystalGlass: return 6
+            case .clearGlass: return 10
+            case .frostGlass: return 14
+            case .deepGlass: return 20
+            case .holoGlass: return 28
             }
         }
     }
     
+    // Legacy compatibility mapping
+    public typealias GlassTier = MaterialTier
+    
     // MARK: - Color Tokens
     public enum Colors {
-        public static let glassBackground = Color(NSColor.windowBackgroundColor).opacity(0.40)
-        public static let glassBorder = Color.white.opacity(0.30)
-        public static let glassHover = Color.white.opacity(0.15)
-        public static let activeTabGlow = Color(hex: "67E8F9").opacity(0.8)
-        public static let textPrimary = Color.primary
-        public static let textSecondary = Color.secondary
-        public static let badgeBackground = Color(hex: "67E8F9").opacity(0.15)
+        public static let glassBackground = Color.white.opacity(0.25)
+        public static let glassBorder = Color.white.opacity(0.45)
+        public static let glassHover = Color.white.opacity(0.35)
+        public static let activeTabGlow = HoloTheme.Palette.holoCyan.opacity(0.35)
+        public static let textPrimary = Color(NSColor.labelColor)
+        public static let textSecondary = Color(NSColor.secondaryLabelColor)
+        public static let badgeBackground = HoloTheme.Palette.appleBlue.opacity(0.12)
     }
     
     // MARK: - Spacing Grid Tokens
@@ -144,11 +132,11 @@ public enum HoloDesign {
         public static let caption = Font.system(size: 11, weight: .regular, design: .default)
     }
     
-    // MARK: - Animation Constants (visionOS Calibrated)
+    // MARK: - Motion Physics Animations
     public enum Animations {
-        public static let springFast = Animation.spring(response: 0.22, dampingFraction: 0.72)
-        public static let springNormal = Animation.spring(response: 0.28, dampingFraction: 0.78)
-        public static let springBouncy = Animation.spring(response: 0.38, dampingFraction: 0.65)
+        public static let springFast = Animation.spring(response: 0.22, dampingFraction: 0.76)
+        public static let springNormal = Animation.spring(response: 0.32, dampingFraction: 0.82)
+        public static let springBouncy = Animation.spring(response: 0.42, dampingFraction: 0.68)
         public static let easeSmooth = Animation.easeInOut(duration: 0.2)
     }
     

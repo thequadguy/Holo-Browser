@@ -94,9 +94,5 @@ final class HoloBetaStressTests: XCTestCase {
     }
 }
 
-// Dummy provider for testing
-class MockAIProvider: AIProviderProtocol {
-    func generateResponse(prompt: String, context: String) async throws -> String {
-        return "Mock Response"
-    }
-}
+// MockAIProvider is defined in the main HoloBrowser module (Sources/AI/AIProvider.swift).
+// No local redeclaration needed — @testable import HoloBrowser makes it accessible here.

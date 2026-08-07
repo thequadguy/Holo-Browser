@@ -77,7 +77,7 @@ public struct HoloCommandCenterView: View {
                         .font(.system(size: 13, weight: .semibold))
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
-                        .background(VisualEffectViewWrapper(material: .hudWindow, blendingMode: .withinWindow).cornerRadius(16))
+                        .background(VisualEffectViewWrapper(material: .popover, blendingMode: .withinWindow).cornerRadius(16))
                         .foregroundColor(.primary)
                     }
                     .buttonStyle(.plain)
@@ -376,10 +376,10 @@ public struct HoloCommandCenterView: View {
         switch route {
         case .web(let url):
             tabManager.activeTab?.navigationManager.load(url: url)
-        case .ai(let query):
-            NotificationCenter.default.post(name: NSNotification.Name("HoloSmartSearchAI"), object: query)
+        case .ai(let query, _):
+            HoloEventBus.shared.post(.smartSearchAI(query: query))
         case .mission(let query):
-            NotificationCenter.default.post(name: NSNotification.Name("HoloSmartSearchMission"), object: query)
+            HoloEventBus.shared.post(.smartSearchMission(query: query))
         }
         
         searchInput = ""

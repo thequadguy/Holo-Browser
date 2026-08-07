@@ -8,7 +8,7 @@ public struct VisualEffectViewWrapper: NSViewRepresentable {
     public var state: NSVisualEffectView.State
     
     public init(
-        material: NSVisualEffectView.Material = .sidebar,
+        material: NSVisualEffectView.Material = .popover,
         blendingMode: NSVisualEffectView.BlendingMode = .behindWindow,
         state: NSVisualEffectView.State = .followsWindowActiveState
     ) {
@@ -22,6 +22,7 @@ public struct VisualEffectViewWrapper: NSViewRepresentable {
         effectView.material = material
         effectView.blendingMode = blendingMode
         effectView.state = state
+        effectView.appearance = NSAppearance(named: .vibrantLight)
         return effectView
     }
     
@@ -29,5 +30,6 @@ public struct VisualEffectViewWrapper: NSViewRepresentable {
         nsView.material = material
         nsView.blendingMode = blendingMode
         nsView.state = state
+        nsView.appearance = NSAppearance(named: .vibrantLight)
     }
 }

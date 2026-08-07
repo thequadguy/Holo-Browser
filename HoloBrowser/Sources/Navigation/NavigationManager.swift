@@ -87,6 +87,10 @@ public final class NavigationManager: NSObject, ObservableObject {
     /// Loads a specified URL in the managed web view.
     public func load(url: URL) {
         self.errorMessage = nil
+        if InternalURLRouter.isInternalURL(url.absoluteString) {
+            self.currentURL = url
+            return
+        }
         let request = URLRequest(url: url)
         webView?.load(request)
     }
@@ -134,6 +138,10 @@ extension NavigationManager: WKNavigationDelegate {
     nonisolated public func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void) {
         Task { @MainActor in
             if let url = navigationAction.request.url {
+                if InternalURLRouter.isInternalURL(url.absoluteString) {
+                    decisionHandler(.cancel)
+                    return
+                }
                 let upgraded = HTTPSOnlyManager.shared.upgradeURLIfNeeded(url)
                 if upgraded != url {
                     decisionHandler(.cancel)
@@ -189,8 +197,11 @@ extension NavigationManager: WKNavigationDelegate {
     @MainActor
     private func handleNavigationError(_ error: Error) {
         let nsError = error as NSError
-        // Ignore user-cancelled navigations (e.g. clicking a link before previous finished)
+        // Ignore user-cancelled navigations or internal holo:// schemes
         if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+            return
+        }
+        if let currentURL = currentURL, InternalURLRouter.isInternalURL(currentURL.absoluteString) {
             return
         }
         self.errorMessage = error.localizedDescription
