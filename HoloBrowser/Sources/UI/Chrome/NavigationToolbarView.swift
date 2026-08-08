@@ -42,9 +42,10 @@ public struct NavigationToolbarView: View {
                     Button(action: { viewModel.goBack() }) {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 12, weight: .semibold))
-                            .frame(width: 26, height: 26)
+                            .frame(width: 28, height: 28)
+                            .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(CrystalButtonStyle())
                     .disabled(!viewModel.canGoBack)
                     .foregroundColor(viewModel.canGoBack ? .primary : .secondary.opacity(0.4))
                     .help("Back")
@@ -52,9 +53,10 @@ public struct NavigationToolbarView: View {
                     Button(action: { viewModel.goForward() }) {
                         Image(systemName: "chevron.right")
                             .font(.system(size: 12, weight: .semibold))
-                            .frame(width: 26, height: 26)
+                            .frame(width: 28, height: 28)
+                            .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(CrystalButtonStyle())
                     .disabled(!viewModel.canGoForward)
                     .foregroundColor(viewModel.canGoForward ? .primary : .secondary.opacity(0.4))
                     .help("Forward")
@@ -62,9 +64,10 @@ public struct NavigationToolbarView: View {
                     Button(action: { viewModel.reloadOrStop() }) {
                         Image(systemName: viewModel.isLoading ? "xmark" : "arrow.clockwise")
                             .font(.system(size: 12, weight: .semibold))
-                            .frame(width: 26, height: 26)
+                            .frame(width: 28, height: 28)
+                            .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(CrystalButtonStyle())
                     .foregroundColor(.primary)
                     .help(viewModel.isLoading ? "Stop" : "Reload")
                 }
@@ -146,10 +149,21 @@ public struct NavigationToolbarView: View {
                         Image(systemName: "sparkles")
                             .font(.system(size: 12, weight: .bold))
                             .frame(width: 26, height: 26)
+                            .background(
+                                Capsule()
+                                    .fill(aiManager.isSidebarVisible ? Color.white.opacity(0.12) : Color.white.opacity(0.04))
+                            )
+                            .overlay(
+                                Capsule()
+                                    .stroke(aiManager.isSidebarVisible ? Color.white.opacity(0.3) : Color.clear, lineWidth: 0.5)
+                            )
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(CrystalButtonStyle())
                     .foregroundColor(aiManager.isSidebarVisible ? .purple : .primary)
-                    .help("Toggle Holo AI Sidebar")
+                    .help("Toggle HoloMind AI Popover")
+                    .popover(isPresented: $aiManager.isSidebarVisible, arrowEdge: .bottom) {
+                        HoloMindPopoverView(aiManager: aiManager, activeTab: viewModel.tabManager.activeTab)
+                    }
                     
                     // Command Palette Button (⌘K)
                     Button(action: {
@@ -189,9 +203,9 @@ public struct NavigationToolbarView: View {
                     }) {
                         Image(systemName: "square.and.arrow.down")
                             .font(.system(size: 12, weight: .semibold))
-                            .frame(width: 26, height: 26)
+                            .frame(width: 28, height: 28)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(CrystalButtonStyle())
                     .foregroundColor(.primary)
                     .help("Import Browser Data & Migration Wizard")
                     
@@ -201,16 +215,16 @@ public struct NavigationToolbarView: View {
                     }) {
                         Image(systemName: "gearshape")
                             .font(.system(size: 12, weight: .semibold))
-                            .frame(width: 26, height: 26)
+                            .frame(width: 28, height: 28)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(CrystalButtonStyle())
                     .foregroundColor(.primary)
                     .help("Preferences (⌘,)")
                 }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .holoCrystalGlass(cornerRadius: 0)
+            .background(Color.clear) // Relying entirely on HoloBackgroundView for underlying crystal
             
             // Linear Progress Indicator
             if viewModel.isLoading && viewModel.progress < 1.0 {
@@ -222,5 +236,14 @@ public struct NavigationToolbarView: View {
                 Divider()
             }
         }
+    }
+}
+
+private struct CrystalButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.94 : 1.0)
+            .brightness(configuration.isPressed ? 0.1 : 0)
+            .animation(HoloDesign.Animations.springFast, value: configuration.isPressed)
     }
 }

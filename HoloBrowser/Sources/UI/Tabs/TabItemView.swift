@@ -48,17 +48,19 @@ public struct TabItemView: View {
                     Image(systemName: "xmark")
                         .font(.system(size: 9, weight: .bold))
                         .foregroundColor(isHovered || isActive ? HoloTheme.Text.secondary : .clear)
-                        .padding(4)
+                        .frame(width: 20, height: 20)
+                        .contentShape(Rectangle())
                         .background(
                             Circle()
                                 .fill(isHovered ? Color.white.opacity(0.3) : Color.clear)
+                                .frame(width: 16, height: 16)
                         )
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(.horizontal, 10)
-        .padding(.vertical, 6)
+        .frame(height: 28)
         .background(
             Group {
                 if isActive {
@@ -67,36 +69,40 @@ public struct TabItemView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                         
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.white.opacity(0.35))
-                        
-                        RadialGradient(
-                            colors: [Color.white.opacity(0.70), HoloTheme.Palette.iceBlue.opacity(0.20), .clear],
-                            center: .topLeading,
-                            startRadius: 0,
-                            endRadius: 100
-                        )
-                        .blendMode(.screen)
+                            .fill(Color.white.opacity(0.10))
+                            
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [Color.white.opacity(0.60), Color.white.opacity(0.10)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 1.0
+                            )
                     }
                 } else {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(isHovered ? Color.white.opacity(0.16) : Color.white.opacity(0.04))
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(isHovered ? Color.white.opacity(0.06) : Color.white.opacity(0.02))
+                        
+                        if isHovered {
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                        }
+                    }
                 }
             }
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(
-                    isActive ? AnyShapeStyle(HoloTheme.Palette.rainbowIridescentGradient) : (isHovered ? AnyShapeStyle(HoloTheme.Palette.glassBorderGradient) : AnyShapeStyle(Color.white.opacity(0.18))),
-                    lineWidth: isActive ? 1.4 : (isHovered ? 1.0 : 0.6)
-                )
-        )
         .shadow(
-            color: isActive ? HoloTheme.Glow.cyan.opacity(0.25) : (isHovered ? Color.black.opacity(0.03) : Color.clear),
-            radius: isActive ? 8 : 3,
+            color: isActive ? Color.black.opacity(0.15) : (isHovered ? Color.black.opacity(0.05) : Color.clear),
+            radius: isActive ? 6 : 3,
             x: 0,
-            y: isActive ? 2 : 1
+            y: isActive ? 3 : 1
         )
-        .scaleEffect(isHovered && !isActive ? 1.02 : 1.0)
+        // Ensure active tab casts a subtle depth shadow onto lower components
+        .zIndex(isActive ? 1 : 0)
+        .scaleEffect(isHovered && !isActive ? 1.01 : 1.0)
         .animation(HoloTheme.Animations.springSnappy, value: isHovered)
         .onTapGesture {
             onSelect()

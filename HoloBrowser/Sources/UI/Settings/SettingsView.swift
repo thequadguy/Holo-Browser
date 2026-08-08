@@ -119,7 +119,7 @@ public struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: BrowserViewModel
     @ObservedObject var privacyManager: AIPrivacyManager
-    @ObservedObject private var settings = HoloCommandCenterSettings.shared
+    @ObservedObject private var settings = HoloStartupSettings.shared
     @ObservedObject private var appearanceSettings = HoloAppearanceSettings.shared
     
     var onClose: (() -> Void)? = nil

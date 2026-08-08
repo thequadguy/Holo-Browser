@@ -16,7 +16,7 @@ public struct TabBarView: View {
         HStack(spacing: 4) {
             ScrollViewReader { proxy in
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 8) {
                         ForEach(tabManager.tabs) { tab in
                             TabItemView(
                                 tab: tab,
@@ -37,7 +37,7 @@ public struct TabBarView: View {
                         }
                     }
                     .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
+                    .padding(.vertical, 2)
                 }
                 .onChange(of: tabManager.activeTabID) { oldID, newID in
                     if let newID = newID {
@@ -66,11 +66,11 @@ public struct TabBarView: View {
                 } label: {
                     Image(systemName: "square.stack")
                         .font(.system(size: 11, weight: .bold))
-                        .frame(width: 24, height: 24)
+                        .frame(width: 28, height: 28)
                         .background(Circle().fill(Color.gray.opacity(0.12)))
                 }
                 .menuStyle(.borderlessButton)
-                .frame(width: 24, height: 24)
+                .frame(width: 28, height: 28)
                 .help("All Open Tabs (\(tabManager.tabs.count))")
             }
             
@@ -86,7 +86,7 @@ public struct TabBarView: View {
             }) {
                 Image(systemName: "plus")
                     .font(.system(size: 11, weight: .bold))
-                    .frame(width: 24, height: 24)
+                    .frame(width: 28, height: 28)
                     .background(Circle().fill(Color.gray.opacity(0.12)))
             }
             .buttonStyle(.plain)

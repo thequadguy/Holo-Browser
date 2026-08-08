@@ -11,7 +11,7 @@ public struct HoloStartPageView: View {
     @State private var searchInput: String = ""
     @StateObject private var historyStore = HistoryStore()
     @StateObject private var bookmarkStore = BookmarkStore()
-    @ObservedObject private var privacyManager = AIPrivacyManager()
+    @FocusState private var isSearchFocused: Bool
     
     public init(mindEngine: HoloMindEngine, tabManager: TabManager, currentProfileID: UUID, isPrivateMode: Bool) {
         self.mindEngine = mindEngine
@@ -21,163 +21,99 @@ public struct HoloStartPageView: View {
     }
     
     public var body: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 32) {
+        ZStack {
+            // 1. Dark Atmospheric Background
+            StartPageBackgroundView()
+            
+            VStack(spacing: 40) {
+                Spacer()
                 
-                // MARK: - 1. Hero Header & Intelligent Search Bar
-                VStack(spacing: 16) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "globe.americas.fill")
-                            .font(.system(size: 36))
-                            .foregroundStyle(HoloTheme.Palette.heroGradient)
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(greetingMessage())
-                                .font(.system(size: 26, weight: .bold))
-                                .foregroundColor(HoloTheme.Text.primary)
-                            Text(isPrivateMode ? "Private Browsing Active • History & memory indexing paused" : "HoloMind Personal Memory active • Indexing 4 workspace tabs")
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundColor(isPrivateMode ? .purple : HoloTheme.Text.secondary)
-                        }
-                        
-                        Spacer()
-                        
-                        Button(action: {
-                            mindEngine.togglePanel()
-                        }) {
-                            HStack(spacing: 6) {
-                                Image(systemName: "sparkles")
-                                    .font(.system(size: 13, weight: .bold))
-                                    .foregroundColor(HoloTheme.Palette.holoCyan)
-                                Text("HoloMind AI")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundColor(HoloTheme.Text.primary)
-                            }
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                            .holoFrostGlass(cornerRadius: 12)
+                // 2. Welcome State
+                VStack(spacing: 8) {
+                    Text("Holo Browser")
+                        .font(.system(size: 32, weight: .bold))
+                        .foregroundColor(Color.white.opacity(0.9))
+                    
+                    Text("The web, intelligently connected.")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(Color.white.opacity(0.5))
+                }
+                
+                // 3. Central Search / Command Field
+                HStack(spacing: 12) {
+                    Image(systemName: searchInputIcon())
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundColor(searchInputColor())
+                    
+                    TextField("Search the web, or type 'h' to ask HoloMind", text: $searchInput, onCommit: executeSearch)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 18, weight: .regular))
+                        .foregroundColor(.white)
+                        .focused($isSearchFocused)
+                    
+                    if !searchInput.isEmpty {
+                        Button(action: { searchInput = "" }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 16))
+                                .foregroundColor(.white.opacity(0.4))
                         }
                         .buttonStyle(.plain)
                     }
                     
-                    // Intelligent Multi-Mode Search Input
-                    HStack(spacing: 10) {
-                        Image(systemName: searchInputIcon())
+                    // HoloMind Sparkle Toggle
+                    Button(action: {
+                        HoloEventBus.shared.post(.smartSearchAI(query: ""))
+                    }) {
+                        Image(systemName: "sparkles")
                             .font(.system(size: 16, weight: .bold))
-                            .foregroundColor(searchInputColor())
-                        
-                        TextField("Search Brave, type URL, 'h' for AI, or 'm' for Mission...", text: $searchInput, onCommit: executeSearch)
-                            .textFieldStyle(.plain)
-                            .font(.system(size: 14))
-                        
-                        if !searchInput.isEmpty {
-                            Button(action: { searchInput = "" }) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.secondary)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        
-                        Button("Search", action: executeSearch)
-                            .buttonStyle(HoloPrimaryButtonStyle())
+                            .foregroundColor(.purple)
+                            .padding(8)
+                            .background(Circle().fill(Color.white.opacity(0.05)))
+                            .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 0.5))
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .holoClearGlass(cornerRadius: 16)
+                    .buttonStyle(.plain)
+                    .help("Ask HoloMind")
+                }
+                .padding(.leading, 20)
+                .padding(.trailing, 8)
+                .padding(.vertical, 8)
+                .frame(maxWidth: 640)
+                .holoDeepGlass(cornerRadius: 24)
+                .shadow(color: isSearchFocused ? Color.black.opacity(0.4) : Color.black.opacity(0.15), radius: isSearchFocused ? 16 : 8, y: isSearchFocused ? 8 : 4)
+                .scaleEffect(isSearchFocused ? 1.01 : 1.0)
+                .animation(HoloDesign.Animations.springFast, value: isSearchFocused)
+                
+                // 4. Frequent / Recent Sites
+                HStack(spacing: 20) {
+                    favoriteTile(title: "Apple", url: "https://apple.com", icon: "apple.logo", color: .white)
+                    favoriteTile(title: "YouTube", url: "https://youtube.com", icon: "play.rectangle.fill", color: .red)
+                    favoriteTile(title: "GitHub", url: "https://github.com", icon: "chevron.left.forwardslash.chevron.right", color: .white)
+                    favoriteTile(title: "Reddit", url: "https://reddit.com", icon: "bubble.left.fill", color: .orange)
+                    favoriteTile(title: "Wikipedia", url: "https://wikipedia.org", icon: "book.fill", color: .white)
+                }
+                .padding(.top, 10)
+                
+                // 5. Quick Actions
+                HStack(spacing: 24) {
+                    quickActionTextButton(title: "New Workspace") {
+                        _ = tabManager.createNewTab()
+                    }
+                    quickActionTextButton(title: "Open Bookmarks") {
+                        // Hook into bookmark manager when implemented
+                    }
+                    quickActionTextButton(title: "Continue Browsing") {
+                        // Future implementation
+                    }
+                    quickActionTextButton(title: "Ask HoloMind") {
+                        HoloEventBus.shared.post(.smartSearchAI(query: ""))
+                    }
                 }
                 .padding(.top, 20)
                 
-                // MARK: - 2. Quick Action Pills
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Quick Actions")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(HoloTheme.Text.secondary)
-                    
-                    HStack(spacing: 12) {
-                        quickActionButton(title: "New Tab", icon: "plus.circle.fill", color: HoloTheme.Palette.holoCyan) {
-                            _ = tabManager.createNewTab()
-                        }
-                        quickActionButton(title: "Ask HoloMind", icon: "sparkles", color: .purple) {
-                            mindEngine.isPanelVisible = true
-                        }
-                        quickActionButton(title: "Create Mission", icon: "target", color: .red) {
-                            mindEngine.assignGoal(title: "New Autonomous Mission", category: .research)
-                            mindEngine.isPanelVisible = true
-                        }
-                        quickActionButton(title: "Reopen Closed Tab", icon: "arrow.uturn.backward.circle.fill", color: .orange) {
-                            _ = tabManager.createNewTab()
-                        }
-                    }
-                }
-                
-                // MARK: - 3. Favorites & Bookmarks Shortcuts
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text("Favorites & Shortcuts")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(HoloTheme.Text.secondary)
-                        Spacer()
-                    }
-                    
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 120))], spacing: 14) {
-                        favoriteTile(title: "Apple", url: "https://apple.com", icon: "apple.logo", color: .white)
-                        favoriteTile(title: "GitHub", url: "https://github.com", icon: "code.square.fill", color: .purple)
-                        favoriteTile(title: "Wikipedia", url: "https://wikipedia.org", icon: "book.fill", color: .blue)
-                        favoriteTile(title: "ArXiv", url: "https://arxiv.org", icon: "doc.text.fill", color: .red)
-                        favoriteTile(title: "Brave Search", url: "https://search.brave.com", icon: "magnifyingglass.circle.fill", color: .orange)
-                    }
-                }
-                
-                // MARK: - 4. HoloMind AI Suggestions
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Image(systemName: "sparkles")
-                            .foregroundColor(HoloTheme.Palette.holoCyan)
-                        Text("HoloMind AI Suggestions")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(HoloTheme.Text.primary)
-                    }
-                    
-                    VStack(spacing: 10) {
-                        aiSuggestionCard(
-                            title: "Summarize Open Tabs",
-                            description: "Analyze 4 research tabs on WebKit performance and generate executive notes.",
-                            icon: "doc.text.magnifyingglass",
-                            actionTitle: "Summarize"
-                        ) {
-                            // Open HoloMind panel — user triggers summarization from the active tab
-                            // using the toolbar AI button or right-click menu.
-                            mindEngine.isPanelVisible = true
-                        }
-                        
-                        aiSuggestionCard(
-                            title: "Continue Research Session",
-                            description: "You were comparing neural network browser engines 2 hours ago.",
-                            icon: "clock.arrow.circlepath",
-                            actionTitle: "Resume"
-                        ) {
-                            mindEngine.isPanelVisible = true
-                        }
-                    }
-                }
-                
-                // MARK: - 5. Privacy & Security Status
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Privacy & Security Status")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(HoloTheme.Text.secondary)
-                    
-                    HStack(spacing: 16) {
-                        privacyMetricCard(title: "Trackers Blocked", value: "142", icon: "shield.checkerboard", color: .green)
-                        privacyMetricCard(title: "Keychain Credentials", value: "28 Vault Entries", icon: "key.fill", color: .blue)
-                        privacyMetricCard(title: "HTTPS Upgrades", value: "100% Active", icon: "lock.shield.fill", color: HoloTheme.Palette.holoCyan)
-                    }
-                }
+                Spacer()
+                Spacer()
             }
-            .padding(24)
         }
-        .background(HoloBackgroundView())
     }
     
     // MARK: - Search Execution Logic
@@ -188,12 +124,12 @@ public struct HoloStartPageView: View {
         
         if trimmed.lowercased().hasPrefix("h ") {
             let prompt = String(trimmed.dropFirst(2))
-            mindEngine.isPanelVisible = true
+            HoloEventBus.shared.post(.smartSearchAI(query: ""))
             mindEngine.executeQuickAction(.detectIntent, context: prompt, profile: BrowserProfile(name: "Default", isPrivate: isPrivateMode))
         } else if trimmed.lowercased().hasPrefix("m ") {
             let goal = String(trimmed.dropFirst(2))
             mindEngine.assignGoal(title: goal, category: .research)
-            mindEngine.isPanelVisible = true
+            HoloEventBus.shared.post(.smartSearchAI(query: ""))
         } else if let url = URL(string: trimmed), trimmed.contains(".") && !trimmed.contains(" ") {
             tabManager.activeTab?.navigationManager.load(url: url)
         } else if let searchURL = URL(string: "https://search.brave.com/search?q=\(trimmed.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? trimmed)") {
@@ -212,35 +148,10 @@ public struct HoloStartPageView: View {
         let t = searchInput.lowercased()
         if t.hasPrefix("h ") { return .purple }
         if t.hasPrefix("m ") { return .red }
-        return HoloTheme.Palette.holoCyan
+        return Color.white.opacity(0.6)
     }
     
-    private func greetingMessage() -> String {
-        let hour = Calendar.current.component(.hour, from: Date())
-        if hour < 12 { return "Good morning" }
-        if hour < 18 { return "Good afternoon" }
-        return "Good evening"
-    }
-    
-    // MARK: - Card Component Builders
-    
-    @ViewBuilder
-    private func quickActionButton(title: String, icon: String, color: Color, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundColor(color)
-                Text(title)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(HoloTheme.Text.primary)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .holoFrostGlass(cornerRadius: 12)
-        }
-        .buttonStyle(.plain)
-    }
+    // MARK: - Component Builders
     
     @ViewBuilder
     private func favoriteTile(title: String, url: String, icon: String, color: Color) -> some View {
@@ -249,65 +160,70 @@ public struct HoloStartPageView: View {
                 tabManager.activeTab?.navigationManager.load(url: targetURL)
             }
         }) {
-            VStack(spacing: 8) {
+            VStack(spacing: 12) {
                 Image(systemName: icon)
-                    .font(.system(size: 20))
+                    .font(.system(size: 24))
                     .foregroundColor(color)
+                    .frame(width: 56, height: 56)
+                    .background(Color.white.opacity(0.04))
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
+                    .shadow(color: Color.black.opacity(0.2), radius: 6, y: 3)
+                
                 Text(title)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(HoloTheme.Text.primary)
-                    .lineLimit(1)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(Color.white.opacity(0.7))
             }
-            .frame(height: 70)
-            .frame(maxWidth: .infinity)
-            .holoGlassTier(cornerRadius: 14)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(CrystalTileButtonStyle())
     }
     
     @ViewBuilder
-    private func aiSuggestionCard(title: String, description: String, icon: String, actionTitle: String, action: @escaping () -> Void) -> some View {
-        HStack(spacing: 14) {
-            Image(systemName: icon)
-                .font(.system(size: 20))
-                .foregroundColor(HoloTheme.Palette.holoCyan)
-                .frame(width: 36)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundColor(HoloTheme.Text.primary)
-                Text(description)
-                    .font(.system(size: 11))
-                    .foregroundColor(HoloTheme.Text.secondary)
-            }
-            
-            Spacer()
-            
-            Button(actionTitle, action: action)
-                .buttonStyle(HoloPrimaryButtonStyle())
+    private func quickActionTextButton(title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(Color.white.opacity(0.5))
         }
-        .padding(14)
-        .holoGlassCard(cornerRadius: 14)
+        .buttonStyle(QuickActionButtonStyle())
     }
-    
-    @ViewBuilder
-    private func privacyMetricCard(title: String, value: String, icon: String, color: Color) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 18))
-                .foregroundColor(color)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(value)
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundColor(HoloTheme.Text.primary)
-                Text(title)
-                    .font(.system(size: 11))
-                    .foregroundColor(HoloTheme.Text.secondary)
-            }
+}
+
+/// Atmospheric dark background specific to the start page
+private struct StartPageBackgroundView: View {
+    var body: some View {
+        ZStack {
+            // Base dark tone
+            Color(red: 0.05, green: 0.05, blue: 0.06)
+                .ignoresSafeArea()
+            
+            // Subtle ambient violet/blue dispersion in the center
+            RadialGradient(
+                colors: [Color.purple.opacity(0.08), Color.blue.opacity(0.04), .clear],
+                center: .center,
+                startRadius: 100,
+                endRadius: 600
+            )
+            .blendMode(.screen)
+            .ignoresSafeArea()
         }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .holoFrostGlass(cornerRadius: 12)
+    }
+}
+
+private struct CrystalTileButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.94 : 1.0)
+            .brightness(configuration.isPressed ? 0.2 : 0)
+            .animation(HoloDesign.Animations.springFast, value: configuration.isPressed)
+    }
+}
+
+private struct QuickActionButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundColor(configuration.isPressed ? Color.white.opacity(0.8) : Color.white.opacity(0.5))
+            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+            .animation(HoloDesign.Animations.springFast, value: configuration.isPressed)
     }
 }

@@ -1,8 +1,8 @@
 {
-  "ramUsageMB" : 91.0859375,
-  "launchTimeMs" : 3050.8029460906982,
-  "pageLoadMs" : 1077.7870416641235,
-  "tabSwitchMs" : 421.54598236083984,
-  "cpuUsagePercent" : 0.1,
-  "estimatedFPS" : 60
+  "launchTimeMs" : 1636.644959449768,
+  "estimatedFPS" : 60,
+  "cpuUsagePercent" : 0.3,
+  "pageLoadMs" : 1387.0528936386108,
+  "tabSwitchMs" : 351.5819311141968,
+  "ramUsageMB" : 91.44921875
 }

@@ -5,174 +5,211 @@ public extension Notification.Name {
     static let focusAddressBar = Notification.Name("focusAddressBar")
 }
 
-/// 3D Liquid Glass OmniBox Address Bar matching reference image image_0.png.
-/// Features a distinct glass capsule bubble with "What are you looking for ?" placeholder, standalone "Search" glass pill button,
-/// and vibrant rainbow holographic edge diffraction.
+/// 3D Liquid Glass Intelligent Omnibox Address Bar.
+/// Replaces the static address bar with a dynamic intent-driven command field.
 public struct AddressBarView: View {
     @ObservedObject var viewModel: BrowserViewModel
     @FocusState private var isFocused: Bool
     
-    @StateObject private var historyStore = HistoryStore()
-    @StateObject private var bookmarkStore = BookmarkStore()
+    @StateObject private var omniboxViewModel = OmniboxViewModel()
     
     public init(viewModel: BrowserViewModel) {
         self.viewModel = viewModel
     }
     
-    private var isAIQuery: Bool {
-        viewModel.inputURLString.trimmingCharacters(in: .whitespaces).hasPrefix("h ")
-    }
-    
-    private var isMissionQuery: Bool {
-        viewModel.inputURLString.trimmingCharacters(in: .whitespaces).hasPrefix("mission ")
+    // Dynamic Intent Resolution via HoloSmartSearchRouter
+    private var currentRoute: HoloSearchRoute {
+        HoloSmartSearchRouter.route(for: viewModel.inputURLString)
     }
     
     public var body: some View {
         VStack(spacing: 0) {
+            // Unified Intelligent Omnibox Capsule
             HStack(spacing: 8) {
-                // Glass Capsule Bubble Address Field (matching image_0.png)
-                HStack(spacing: 8) {
-                    // Lock / Privacy Badge
-                    if isAIQuery {
+                // Dynamic Leading Badge / Icon
+                Group {
+                    switch currentRoute {
+                    case .ai(_, _):
                         HStack(spacing: 4) {
                             HoloAssistantPresenceView(state: .listening)
                                 .scaleEffect(0.6)
                                 .frame(width: 16, height: 16)
-                            Text("HoloMind AI")
-                                .font(.system(size: 9, weight: .bold))
-                                .foregroundColor(HoloTheme.Palette.holoCyan)
+                            if isFocused {
+                                Text("HoloMind")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundColor(HoloTheme.Palette.holoCyan)
+                            }
                         }
                         .padding(.horizontal, 6)
                         .padding(.vertical, 3)
                         .background(Capsule().fill(HoloTheme.Palette.holoCyan.opacity(0.16)))
-                    } else if isMissionQuery {
+                        
+                    case .mission(_):
                         HStack(spacing: 4) {
-                            Image(systemName: "bolt.horizontal.fill")
-                                .font(.system(size: 9, weight: .bold))
+                            Image(systemName: "target")
+                                .font(.system(size: 10, weight: .bold))
                                 .foregroundColor(HoloTheme.Palette.holoEmerald)
-                            Text("Mission")
-                                .font(.system(size: 9, weight: .bold))
-                                .foregroundColor(HoloTheme.Palette.holoEmerald)
+                            if isFocused {
+                                Text("Mission")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundColor(HoloTheme.Palette.holoEmerald)
+                            }
                         }
                         .padding(.horizontal, 6)
                         .padding(.vertical, 3)
                         .background(Capsule().fill(HoloTheme.Palette.holoEmerald.opacity(0.16)))
-                    } else {
-                        Image(systemName: viewModel.inputURLString.hasPrefix("https://") ? "lock.fill" : "shield.checkmark.fill")
-                            .font(.system(size: 11))
-                            .foregroundColor(viewModel.profileManager.activeProfile.isPrivate ? .orange : HoloTheme.Palette.holoCyan)
-                    }
-                    
-                    TextField("What are you looking for ?", text: $viewModel.inputURLString)
-                        .textFieldStyle(.plain)
-                        .font(.system(size: 13, weight: .medium, design: .default))
-                        .focused($isFocused)
-                        .onSubmit {
-                            viewModel.submitAddressInput()
-                        }
-                        .onExitCommand {
-                            cancelEditing()
-                        }
-                    
-                    if !viewModel.inputURLString.isEmpty && isFocused {
-                        Button(action: {
-                            cancelEditing()
-                        }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundColor(.secondary)
-                                .font(.system(size: 12))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 7)
-                .background(
-                    ZStack {
-                        VisualEffectViewWrapper(material: .popover, blendingMode: .behindWindow)
-                            .clipShape(Capsule())
                         
-                        Capsule()
-                            .fill(isFocused ? Color.white.opacity(0.32) : Color.white.opacity(0.18))
+                    case .web(let url):
+                        if url.host?.contains("search.brave.com") == true && !viewModel.inputURLString.hasPrefix("http") && !viewModel.inputURLString.contains(".") {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.secondary)
+                        } else {
+                            Image(systemName: viewModel.inputURLString.hasPrefix("https://") ? "lock.fill" : "globe")
+                                .font(.system(size: 11))
+                                .foregroundColor(viewModel.profileManager.activeProfile.isPrivate ? .orange : .secondary)
+                        }
                     }
-                )
-                .overlay(
-                    Capsule()
-                        .stroke(
-                            isFocused ? AnyShapeStyle(HoloTheme.Palette.rainbowIridescentGradient) : AnyShapeStyle(HoloTheme.Palette.glassBorderGradient),
-                            lineWidth: isFocused ? 1.5 : 1.0
-                        )
-                )
-                .shadow(
-                    color: isFocused ? HoloTheme.Glow.cyan.opacity(0.35) : Color.black.opacity(0.04),
-                    radius: isFocused ? 10 : 3,
-                    x: 0,
-                    y: isFocused ? 2 : 1
-                )
-                
-                // Standalone "Search" Pill Glass Button (matching image_0.png)
-                Button(action: {
-                    viewModel.submitAddressInput()
-                }) {
-                    Text("Search")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 18)
-                        .padding(.vertical, 7)
-                        .background(
-                            ZStack {
-                                VisualEffectViewWrapper(material: .popover, blendingMode: .behindWindow)
-                                    .clipShape(Capsule())
-                                Capsule()
-                                    .fill(Color.white.opacity(0.24))
-                            }
-                        )
-                        .clipShape(Capsule())
-                        .overlay(
-                            Capsule()
-                                .stroke(HoloTheme.Palette.rainbowIridescentGradient, lineWidth: 1.2)
-                        )
-                        .shadow(color: HoloTheme.Glow.cyan.opacity(0.25), radius: 6, y: 1)
                 }
-                .buttonStyle(.plain)
+                .animation(HoloDesign.Animations.springFast, value: viewModel.inputURLString)
+                
+                TextField("Search or type URL", text: $viewModel.inputURLString)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 13, weight: isFocused ? .semibold : .medium, design: .default))
+                    .focused($isFocused)
+                    .onSubmit {
+                        if omniboxViewModel.selectedIndex >= 0 {
+                            if omniboxViewModel.executeSelected(browserViewModel: viewModel) {
+                                isFocused = false
+                            }
+                        } else {
+                            viewModel.submitAddressInput()
+                            isFocused = false
+                        }
+                    }
+                    .onExitCommand {
+                        if isFocused {
+                            cancelEditing()
+                        }
+                    }
+                    .onMoveCommand { direction in
+                        switch direction {
+                        case .up:
+                            omniboxViewModel.moveSelectionUp()
+                        case .down:
+                            omniboxViewModel.moveSelectionDown()
+                        default:
+                            break
+                        }
+                    }
+                    .onChange(of: viewModel.inputURLString) { _, newValue in
+                        omniboxViewModel.query = newValue
+                    }
+                    .onChange(of: isFocused) { _, focused in
+                        if focused {
+                            omniboxViewModel.query = viewModel.inputURLString
+                        } else {
+                            omniboxViewModel.resetState()
+                        }
+                    }
+                
+                if !viewModel.inputURLString.isEmpty && isFocused {
+                    Button(action: {
+                        cancelEditing()
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                            .font(.system(size: 12))
+                    }
+                    .buttonStyle(.plain)
+                }
             }
+            .padding(.horizontal, 14)
+            .frame(height: 32)
+            .background(
+                ZStack {
+                    VisualEffectViewWrapper(material: .popover, blendingMode: .behindWindow)
+                        .clipShape(Capsule())
+                    
+                    Capsule()
+                        .fill(isFocused ? Color.black.opacity(0.12) : Color.black.opacity(0.04))
+                }
+            )
+            .overlay(
+                Capsule()
+                    .stroke(
+                        isFocused ? AnyShapeStyle(Color.white.opacity(0.25)) : AnyShapeStyle(HoloTheme.Palette.glassBorderGradient),
+                        lineWidth: isFocused ? 1.0 : 0.5
+                    )
+            )
+            .shadow(
+                color: isFocused ? Color.black.opacity(0.20) : Color.black.opacity(0.04),
+                radius: isFocused ? 8 : 3,
+                x: 0,
+                y: isFocused ? 2 : 1
+            )
+            .scaleEffect(isFocused ? 1.02 : 1.0)
+            .animation(HoloDesign.Animations.springNormal, value: isFocused)
             .onReceive(NotificationCenter.default.publisher(for: .focusAddressBar)) { _ in
                 isFocused = true
+                viewModel.inputURLString = viewModel.tabManager.activeTab?.url?.absoluteString ?? ""
             }
             
             // Autocomplete Suggestion Dropdown
-            if isFocused && !viewModel.inputURLString.isEmpty {
-                let suggestions = getSuggestions(query: viewModel.inputURLString)
-                if !suggestions.isEmpty {
+            if isFocused {
+                if !omniboxViewModel.suggestions.isEmpty {
                     VStack(alignment: .leading, spacing: 2) {
-                        ForEach(suggestions.prefix(4), id: \.self) { sug in
+                        ForEach(Array(omniboxViewModel.suggestions.enumerated()), id: \.element.id) { index, sug in
                             Button(action: {
-                                viewModel.inputURLString = sug
-                                viewModel.submitAddressInput()
-                                isFocused = false
+                                omniboxViewModel.selectedIndex = index
+                                let executed = omniboxViewModel.executeSelected(browserViewModel: viewModel)
+                                if executed {
+                                    isFocused = false
+                                }
                             }) {
-                                HStack {
-                                    Image(systemName: "clock.arrow.circlepath")
-                                        .font(.caption)
-                                        .foregroundColor(HoloTheme.Palette.holoCyan)
-                                    Text(sug)
-                                        .font(.system(size: 11, design: .monospaced))
-                                        .lineLimit(1)
+                                HStack(spacing: 12) {
+                                    Image(systemName: sug.icon)
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(sug.iconColor)
+                                        .frame(width: 22)
+                                    
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(sug.title)
+                                            .font(.system(size: 13, weight: .medium))
+                                            .foregroundColor(.primary)
+                                            .lineLimit(1)
+                                        
+                                        if let subtitle = sug.subtitle {
+                                            Text(subtitle)
+                                                .font(.system(size: 11))
+                                                .foregroundColor(.secondary)
+                                                .lineLimit(1)
+                                        }
+                                    }
                                     Spacer()
                                 }
                                 .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
-                                .background(RoundedRectangle(cornerRadius: 6).fill(Color.white.opacity(0.20)))
+                                .padding(.vertical, 6)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .fill(omniboxViewModel.selectedIndex == index ? Color.white.opacity(0.12) : Color.clear)
+                                )
                             }
                             .buttonStyle(.plain)
+                            .onHover { isHovered in
+                                if isHovered {
+                                    omniboxViewModel.selectedIndex = index
+                                }
+                            }
                         }
                     }
                     .padding(6)
                     .holoDeepGlass(cornerRadius: 12)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(HoloTheme.Palette.rainbowIridescentGradient, lineWidth: 1.0)
+                            .stroke(HoloTheme.Palette.glassBorderGradient, lineWidth: 0.5)
                     )
+                    .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 5)
                     .padding(.top, 4)
                 }
             }
@@ -186,24 +223,5 @@ public struct AddressBarView: View {
             viewModel.inputURLString = ""
         }
         isFocused = false
-    }
-    
-    private func getSuggestions(query: String) -> [String] {
-        let q = query.lowercased()
-        var results: [String] = []
-        
-        for item in historyStore.historyItems {
-            if item.title.lowercased().contains(q) || item.urlString.lowercased().contains(q) {
-                results.append(item.urlString)
-            }
-        }
-        
-        for b in bookmarkStore.bookmarks {
-            if b.title.lowercased().contains(q) || b.urlString.lowercased().contains(q) {
-                results.append(b.urlString)
-            }
-        }
-        
-        return Array(Set(results))
     }
 }

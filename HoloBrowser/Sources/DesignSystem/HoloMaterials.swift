@@ -29,9 +29,9 @@ public struct HoloGlassCardModifier: ViewModifier {
                         // Layer 1: Background Blur Layer (Behind-Window Vibrancy)
                         VisualEffectViewWrapper(material: .popover, blendingMode: .behindWindow)
                         
-                        // Layer 2: Frost / Transparency Layer (Sheer 22% / 36% white fill)
+                        // Layer 2: Frost / Transparency Layer (Sheer 2% / 8% white fill)
                         RoundedRectangle(cornerRadius: cornerRadius)
-                            .fill(hover ? Color.white.opacity(0.36) : Color.white.opacity(0.22))
+                            .fill(hover ? Color.white.opacity(0.08) : Color.white.opacity(0.02))
                         
                         // Layer 3: Internal Tint Layer (Soft ice blue specular cast)
                         RoundedRectangle(cornerRadius: cornerRadius)
@@ -101,8 +101,8 @@ public struct HoloGlassCardModifier: ViewModifier {
             )
             // Layer 6: Delicate Elevation Drop Shadow
             .shadow(
-                color: hover ? HoloTheme.Glow.cyan.opacity(0.25) : Color.black.opacity(0.04),
-                radius: hover ? 12 : 5,
+                color: hover ? Color.black.opacity(0.12) : Color.black.opacity(0.04),
+                radius: hover ? 8 : 4,
                 x: 0,
                 y: hover ? 3 : 1
             )

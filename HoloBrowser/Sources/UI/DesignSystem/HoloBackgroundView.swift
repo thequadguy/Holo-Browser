@@ -17,7 +17,7 @@ public struct HoloBackgroundView: View {
                 .ignoresSafeArea()
             
             // 2. Soft Crystal White Tint Fills
-            Color.white.opacity(0.12)
+            Color.white.opacity(0.02)
                 .ignoresSafeArea()
             
             // 3. Quiet Environment Light Fields (Soft Ice Blue & Soft Cyan Specular Caustics)

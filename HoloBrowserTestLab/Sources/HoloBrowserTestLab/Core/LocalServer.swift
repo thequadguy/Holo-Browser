@@ -58,7 +58,7 @@ public final class LocalServer {
         // Kill any existing python server on port 8085
         let killTask = Process()
         killTask.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
-        killTask.arguments = ["-f", "python3 -m http.server 8085"]
+        killTask.arguments = ["-f", "8085"]
         try? killTask.run()
         killTask.waitUntilExit()
 

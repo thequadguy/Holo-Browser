@@ -14,11 +14,11 @@ public enum HoloDesign {
         
         public var opacity: Double {
             switch self {
-            case .crystalGlass: return 0.14
-            case .clearGlass: return 0.20
-            case .frostGlass: return 0.32
-            case .deepGlass: return 0.48
-            case .holoGlass: return 0.58
+            case .crystalGlass: return 0.02
+            case .clearGlass: return 0.05
+            case .frostGlass: return 0.08
+            case .deepGlass: return 0.12
+            case .holoGlass: return 0.15
             }
         }
         

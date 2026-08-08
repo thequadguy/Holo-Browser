@@ -20,82 +20,73 @@ public struct ContentView: View {
     
     public var body: some View {
         ZStack {
-            // Main Content & Sidebar Layout
-            HStack(spacing: 0) {
-                // Primary Browser Canvas
-                VStack(spacing: 0) {
-                    // Tab Bar (hidden in Focus mode)
-                    if modeManager.currentMode != .focus {
-                        TabBarView(tabManager: viewModel.tabManager, activeProfileID: viewModel.profileManager.activeProfile.id, onNewTab: { viewModel.createNewTab() })
-                            .transition(.move(edge: .top).combined(with: .opacity))
-                    }
-                    
-                    // Holo Navigation Toolbar (hidden in Focus mode)
-                    if modeManager.currentMode != .focus {
-                        NavigationToolbarView(
-                            viewModel: viewModel,
-                            commandManager: commandManager,
-                            modeManager: modeManager,
-                            aiManager: environment.aiManager,
-                            onOpenSettings: { SettingsWindowController.shared.open(viewModel: viewModel, privacyManager: environment.privacyManager) },
-                            onOpenImportWizard: { overlayCoordinator.showImportWizardSheet = true },
-                            onOpenHoloMind: { environment.mindEngine.togglePanel() },
-                            onExecuteQuickAction: { action in
-                                if action == .summarizePage,
-                                   let webView = viewModel.tabManager.activeTab?.webView {
-                                    environment.mindEngine.summarizePage(
-                                        webView: webView,
-                                        aiManager: environment.aiManager,
-                                        profile: viewModel.profileManager.activeProfile
-                                    )
-                                } else {
-                                    environment.mindEngine.executeQuickAction(action, context: nil, profile: viewModel.profileManager.activeProfile)
-                                }
-                            }
-                        )
+            // Primary Browser Canvas (No Sidebar)
+            VStack(spacing: 0) {
+                // Tab Bar (hidden in Focus mode)
+                if modeManager.currentMode != .focus {
+                    TabBarView(tabManager: viewModel.tabManager, activeProfileID: viewModel.profileManager.activeProfile.id, onNewTab: { viewModel.createNewTab() })
                         .transition(.move(edge: .top).combined(with: .opacity))
-                    }
-                    
-                    // Web Content Area
-                    ZStack(alignment: .topTrailing) {
-                        if !hasCompletedOnboarding {
-                            // Bright Liquid Glass background card while onboarding is presented
-                            VisualEffectViewWrapper(material: .popover, blendingMode: .behindWindow)
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        } else if let activeTab = viewModel.tabManager.activeTab, activeTab.state != .closed {
-                            if activeTab.url?.scheme == "holo" && activeTab.url?.host == "start" {
-                                HoloStartPageView(
-                                    mindEngine: environment.mindEngine,
-                                    tabManager: viewModel.tabManager,
-                                    currentProfileID: viewModel.profileManager.activeProfile.id,
-                                    isPrivateMode: viewModel.profileManager.activeProfile.isPrivate
-                                )
-                                .id(activeTab.id)
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            } else {
-                                WKWebViewWrapper(tab: activeTab)
-                                    .id(activeTab.id)
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            }
-                        } else {
-                            Color.clear
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        }
-                        
-                        // Session Crash Recovery Overlay Banner (Top Trailing floating below chrome)
-                        if viewModel.sessionManager.hasRecoverableSession && viewModel.sessionManager.showRecoveryPrompt {
-                            HoloSessionRecoveryCard(viewModel: viewModel)
-                                .padding(.top, 16)
-                                .padding(.trailing, 16)
-                                .transition(.move(edge: .top).combined(with: .opacity))
-                        }
-                    }
                 }
                 
-                // Native AI Sidebar Drawer
-                if environment.aiManager.isSidebarVisible {
-                    AISidebarView(aiManager: environment.aiManager, activeTab: viewModel.tabManager.activeTab)
-                        .transition(.move(edge: .trailing).combined(with: .opacity))
+                // Holo Navigation Toolbar (hidden in Focus mode)
+                if modeManager.currentMode != .focus {
+                    NavigationToolbarView(
+                        viewModel: viewModel,
+                        commandManager: commandManager,
+                        modeManager: modeManager,
+                        aiManager: environment.aiManager,
+                        onOpenSettings: { SettingsWindowController.shared.open(viewModel: viewModel, privacyManager: environment.privacyManager) },
+                        onOpenImportWizard: { overlayCoordinator.showImportWizardSheet = true },
+                        onOpenHoloMind: { environment.mindEngine.togglePanel() },
+                        onExecuteQuickAction: { action in
+                            if action == .summarizePage,
+                               let webView = viewModel.tabManager.activeTab?.webView {
+                                environment.mindEngine.summarizePage(
+                                    webView: webView,
+                                    aiManager: environment.aiManager,
+                                    profile: viewModel.profileManager.activeProfile
+                                )
+                            } else {
+                                environment.mindEngine.executeQuickAction(action, context: nil, profile: viewModel.profileManager.activeProfile)
+                            }
+                        }
+                    )
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
+                
+                // Web Content Area
+                ZStack(alignment: .topTrailing) {
+                    if !hasCompletedOnboarding {
+                        // Bright Liquid Glass background card while onboarding is presented
+                        VisualEffectViewWrapper(material: .popover, blendingMode: .behindWindow)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else if let activeTab = viewModel.tabManager.activeTab, activeTab.state != .closed {
+                        if activeTab.url?.scheme == "holo" && activeTab.url?.host == "start" {
+                            HoloStartPageView(
+                                mindEngine: environment.mindEngine,
+                                tabManager: viewModel.tabManager,
+                                currentProfileID: viewModel.profileManager.activeProfile.id,
+                                isPrivateMode: viewModel.profileManager.activeProfile.isPrivate
+                            )
+                            .id(activeTab.id)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        } else {
+                            WKWebViewWrapper(tab: activeTab)
+                                .id(activeTab.id)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        }
+                    } else {
+                        Color.clear
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                    
+                    // Session Crash Recovery Overlay Banner (Top Trailing floating below chrome)
+                    if viewModel.sessionManager.hasRecoverableSession && viewModel.sessionManager.showRecoveryPrompt {
+                        HoloSessionRecoveryCard(viewModel: viewModel)
+                            .padding(.top, 16)
+                            .padding(.trailing, 16)
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                    }
                 }
             }
             
@@ -272,13 +263,13 @@ public struct ContentView: View {
             viewModel.tabManager.permissionManager = environment.permissionManager
             viewModel.tabManager.reliabilityManager = environment.reliabilityManager
 
-            let startupBehavior = HoloCommandCenterSettings.shared.startupBehavior
+            let startupBehavior = HoloStartupSettings.shared.startupBehavior
             if startupBehavior == .previousSession && viewModel.sessionManager.loadPreviousSession() != nil {
                 viewModel.restorePreviousSession()
                 if viewModel.tabManager.tabs.isEmpty {
                     viewModel.tabManager.setup(dataStore: viewModel.profileManager.activeWebsiteDataStore)
                 }
-            } else if startupBehavior == .custom, let url = URL(string: HoloCommandCenterSettings.shared.customHomepageURL) {
+            } else if startupBehavior == .custom, let url = URL(string: HoloStartupSettings.shared.customHomepageURL) {
                 viewModel.tabManager.setup(dataStore: viewModel.profileManager.activeWebsiteDataStore, startupURL: url)
             } else {
                 viewModel.tabManager.setup(dataStore: viewModel.profileManager.activeWebsiteDataStore)
@@ -330,17 +321,7 @@ public struct ContentView: View {
                 onDismiss: { overlayCoordinator.showImportWizardSheet = false }
             )
         }
-        .sheet(isPresented: Binding(
-            get: { environment.mindEngine.isPanelVisible },
-            set: { environment.mindEngine.isPanelVisible = $0 }
-        )) {
-            HoloMindDashboardView(
-                mindEngine: environment.mindEngine,
-                currentProfileID: viewModel.profileManager.activeProfile.id,
-                isPrivateMode: viewModel.profileManager.activeProfile.isPrivate,
-                onDismiss: { environment.mindEngine.isPanelVisible = false }
-            )
-        }
+
         .sheet(isPresented: $overlayCoordinator.showAboutSheet) {
             AboutHoloBrowserView()
         }
@@ -375,15 +356,15 @@ public struct ContentView: View {
                         profile: viewModel.profileManager.activeProfile
                     )
                 } else {
-                    environment.mindEngine.isPanelVisible = true
+                    environment.aiManager.isSidebarVisible = true
                 }
             case .quickActionSaveMemory:
                 environment.mindEngine.executeQuickAction(.saveToMemory, context: "Selected text from Context Menu", profile: viewModel.profileManager.activeProfile)
             case .smartSearchAI:
-                environment.mindEngine.isPanelVisible = true
+                environment.aiManager.isSidebarVisible = true
             case .smartSearchMission(let query):
                 environment.mindEngine.assignGoal(title: query, category: .research)
-                environment.mindEngine.isPanelVisible = true
+                environment.aiManager.isSidebarVisible = true
             default:
                 break
             }

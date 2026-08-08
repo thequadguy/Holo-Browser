@@ -5,7 +5,6 @@ import WebKit
 @MainActor
 public final class HoloMindEngine: ObservableObject {
     @Published public var currentState: HAssistantState = .idle
-    @Published public var isPanelVisible: Bool = false
 
     /// Populated after a real `summarizePage` call completes. Used by the HoloMind dashboard
     /// to display the latest page summary without requiring the AI sidebar to be open.
@@ -38,7 +37,7 @@ public final class HoloMindEngine: ObservableObject {
     }
 
     public func togglePanel() {
-        isPanelVisible.toggle()
+        HoloEventBus.shared.post(.smartSearchAI(query: ""))
     }
 
     public func analyzeBrowserState(tabs: [Tab]) {
@@ -92,7 +91,7 @@ public final class HoloMindEngine: ObservableObject {
         if aiManager.provider is MockAIProvider {
             lastSummaryText = nil
             summaryError = "No AI provider is configured. Open Settings → AI to add an OpenAI or Anthropic API key to enable real page summaries."
-            isPanelVisible = true
+            aiManager.isSidebarVisible = true
             notificationCenter.post(notification: HoloNotification(
                 title: "AI Provider Required",
                 message: "Configure an AI provider in Settings → AI to enable page summarization.",
@@ -106,7 +105,7 @@ public final class HoloMindEngine: ObservableObject {
         if let url = webView.url, url.scheme?.lowercased() == "file" {
             lastSummaryText = nil
             summaryError = "Local File Detected (file://). HoloMind respects your system security — local files are protected by macOS App Sandbox permissions. Open files over HTTPS or grant explicit file access in Settings → Security & Privacy."
-            isPanelVisible = true
+            aiManager.isSidebarVisible = true
             notificationCenter.post(notification: HoloNotification(
                 title: "Local File Protected",
                 message: "Local file content is restricted by App Sandbox permissions.",
@@ -121,7 +120,7 @@ public final class HoloMindEngine: ObservableObject {
             summaryError = nil
             lastSummaryText = nil
             currentState = .analyzing
-            isPanelVisible = true
+            aiManager.isSidebarVisible = true
 
             defer {
                 isSummarizing = false
@@ -231,7 +230,7 @@ public final class HoloMindEngine: ObservableObject {
             // Callers that cannot provide a WKWebView (e.g. the start page) should call
             // summarizePage(webView:aiManager:profile:) directly. If this fallback is hit,
             // open the HoloMind panel so the user can trigger it from there.
-            isPanelVisible = true
+            HoloEventBus.shared.post(.smartSearchAI(query: ""))
 
         case .saveToMemory:
             currentState = .analyzing
