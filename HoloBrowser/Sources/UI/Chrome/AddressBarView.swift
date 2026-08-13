@@ -13,6 +13,8 @@ public struct AddressBarView: View {
     
     @StateObject private var omniboxViewModel = OmniboxViewModel()
     
+    @State private var isHovered: Bool = false
+    
     public init(viewModel: BrowserViewModel) {
         self.viewModel = viewModel
     }
@@ -78,6 +80,8 @@ public struct AddressBarView: View {
                     .font(.system(size: 13, weight: isFocused ? .semibold : .medium, design: .default))
                     .foregroundColor(.primary)
                     .focused($isFocused)
+                    .accessibilityLabel("Address and Search Field")
+                    .accessibilityHint("Type a URL or search term and press Return")
                     .onSubmit {
                         if omniboxViewModel.selectedIndex >= 0 {
                             if omniboxViewModel.executeSelected(browserViewModel: viewModel) {
@@ -123,6 +127,7 @@ public struct AddressBarView: View {
                             .font(.system(size: 12))
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Clear address text")
                 }
             }
             .padding(.horizontal, 14)
@@ -130,26 +135,31 @@ public struct AddressBarView: View {
             .frame(height: 34)
             .background(
                 Capsule()
-                    .fill(Color.white.opacity(isFocused ? 0.09 : 0.05))
+                    .fill(Color.white.opacity(isFocused ? 0.09 : (isHovered ? 0.07 : 0.04)))
             )
             .overlay(
                 Capsule()
                     .stroke(
-                        isFocused ? AnyShapeStyle(HoloTheme.Palette.glassBorderGradient) : AnyShapeStyle(Color.white.opacity(0.18)),
+                        isFocused ? AnyShapeStyle(HoloTheme.Palette.glassBorderGradient) : (isHovered ? AnyShapeStyle(Color.white.opacity(0.28)) : AnyShapeStyle(Color.white.opacity(0.18))),
                         lineWidth: isFocused ? 1.1 : 0.75
                     )
             )
             .shadow(
-                color: isFocused ? Color.black.opacity(0.12) : Color.clear,
-                radius: isFocused ? 8 : 0,
+                color: isFocused ? Color.black.opacity(0.12) : (isHovered ? Color.black.opacity(0.05) : Color.clear),
+                radius: isFocused ? 8 : (isHovered ? 4 : 0),
                 x: 0,
                 y: 0
             )
-            .animation(HoloDesign.Animations.springNormal, value: isFocused)
+            .animation(HoloTheme.Animations.springSnappy, value: isFocused)
+            .animation(HoloTheme.Animations.springSnappy, value: isHovered)
+            .onHover { hovering in
+                isHovered = hovering
+            }
             .onReceive(NotificationCenter.default.publisher(for: .focusAddressBar)) { _ in
                 isFocused = true
                 viewModel.inputURLString = viewModel.tabManager.activeTab?.url?.absoluteString ?? ""
             }
+
             
             // Autocomplete Suggestion Dropdown
             if isFocused {

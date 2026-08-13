@@ -48,6 +48,8 @@ public struct NavigationToolbarView: View {
                     .buttonStyle(QuietChromeButtonStyle())
                     .disabled(!viewModel.canGoBack)
                     .foregroundColor(viewModel.canGoBack ? .primary : .secondary.opacity(0.4))
+                    .accessibilityLabel("Go Back")
+                    .accessibilityHint("Navigates back to the previous webpage")
                     .help("Back")
                     
                     Button(action: { viewModel.goForward() }) {
@@ -59,6 +61,8 @@ public struct NavigationToolbarView: View {
                     .buttonStyle(QuietChromeButtonStyle())
                     .disabled(!viewModel.canGoForward)
                     .foregroundColor(viewModel.canGoForward ? .primary : .secondary.opacity(0.4))
+                    .accessibilityLabel("Go Forward")
+                    .accessibilityHint("Navigates forward to the next webpage")
                     .help("Forward")
                     
                     Button(action: { viewModel.reloadOrStop() }) {
@@ -69,6 +73,8 @@ public struct NavigationToolbarView: View {
                     }
                     .buttonStyle(QuietChromeButtonStyle())
                     .foregroundColor(.primary)
+                    .accessibilityLabel(viewModel.isLoading ? "Stop Loading" : "Reload Page")
+                    .accessibilityHint("Reloads the current page or cancels active loading")
                     .help(viewModel.isLoading ? "Stop" : "Reload")
                 }
                 
@@ -91,6 +97,8 @@ public struct NavigationToolbarView: View {
                     .background(Circle().fill(Color.white.opacity(0.06)))
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Profile Switcher")
+                .accessibilityHint("Opens profile switcher menu")
                 .popover(isPresented: $showProfilePopover, arrowEdge: .bottom) {
                     ProfileSwitcherView(profileManager: viewModel.profileManager)
                 }
@@ -111,7 +119,10 @@ public struct NavigationToolbarView: View {
                     }
                     .buttonStyle(.plain)
                     .foregroundColor(.secondary)
+                    .accessibilityLabel("HoloMind Assistant")
+                    .accessibilityHint("Opens HoloMind assistant overlay")
                     .help("HoloMind Chief of Staff (⌘⇧H)")
+
                     
                     // Holo Quick Actions Menu
                     Menu {

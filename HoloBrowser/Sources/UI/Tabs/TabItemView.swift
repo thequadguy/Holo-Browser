@@ -57,10 +57,15 @@ public struct TabItemView: View {
                         )
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Close tab \(tab.title)")
             }
         }
         .padding(.horizontal, 10)
         .frame(height: 28)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(tab.isPinned ? "Pinned tab: \(tab.title)" : "Tab: \(tab.title)")
+        .accessibilityAddTraits(isActive ? [.isSelected] : [])
+
         .background(
             Group {
                 if isActive {
