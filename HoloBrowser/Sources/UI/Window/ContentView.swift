@@ -77,6 +77,14 @@ public struct ContentView: View {
                         // Bright Liquid Glass background card while onboarding is presented
                         VisualEffectViewWrapper(material: .popover, blendingMode: .behindWindow)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else if viewModel.tabManager.splitState.isActive {
+                        HoloSplitView(
+                            tabManager: viewModel.tabManager,
+                            environment: environment,
+                            activeProfileID: viewModel.profileManager.activeProfile.id,
+                            isPrivateMode: viewModel.profileManager.activeProfile.isPrivate
+                        )
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else if let activeTab = viewModel.tabManager.activeTab, activeTab.state != .closed {
                         if activeTab.url?.scheme == "holo" && activeTab.url?.host == "start" {
                             HoloStartPageView(
@@ -96,6 +104,7 @@ public struct ContentView: View {
                         Color.clear
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
+
                     
                     // Session Crash Recovery Overlay Banner (Top Trailing floating below chrome)
                     if viewModel.sessionManager.hasRecoverableSession && viewModel.sessionManager.showRecoveryPrompt {

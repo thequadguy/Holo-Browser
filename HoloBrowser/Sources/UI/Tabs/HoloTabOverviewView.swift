@@ -325,10 +325,31 @@ private struct HoloTabCardView: View {
                 
                 if isActive {
                     HoloBadge("Active", color: HoloTheme.Palette.holoCyan)
+                } else {
+                    Button(action: {
+                        if let activeID = tabManager.activeTabID {
+                            tabManager.enterSplitView(primaryID: activeID, secondaryID: tab.id)
+                            isPresented = false
+                        }
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "rectangle.split.2x1")
+                                .font(.system(size: 10))
+                            Text("Split")
+                                .font(.system(size: 10, weight: .medium))
+                        }
+                        .foregroundColor(HoloTheme.Palette.holoCyan)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(HoloTheme.Palette.holoCyan.opacity(0.12)))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Open tab in Split View")
                 }
             }
         }
         .padding(14)
+
         .frame(height: 140)
         .background(
             ZStack {

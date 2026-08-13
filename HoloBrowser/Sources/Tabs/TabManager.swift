@@ -193,8 +193,55 @@ public final class TabManager: ObservableObject {
     @Published public private(set) var tabGroups: [TabGroup] = []
     @Published public private(set) var spaces: [HoloSpace] = []
     @Published public var activeSpaceID: UUID? = nil
+    @Published public var splitState: HoloSplitState = HoloSplitState()
+
+    // MARK: - Holo Split View Management
+
+    public func enterSplitView(primaryID: UUID, secondaryID: UUID) {
+        guard tabs.contains(where: { $0.id == primaryID }),
+              tabs.contains(where: { $0.id == secondaryID }),
+              primaryID != secondaryID else { return }
+        
+        splitState = HoloSplitState(
+            isActive: true,
+            primaryTabID: primaryID,
+            secondaryTabID: secondaryID,
+            activePane: .primary,
+            dividerRatio: 0.5
+        )
+        selectTab(id: primaryID)
+    }
+
+    public func exitSplitView() {
+        splitState.isActive = false
+    }
+
+    public func setSplitActivePane(_ pane: SplitPane) {
+        splitState.activePane = pane
+        if pane == .primary, let pid = splitState.primaryTabID {
+            selectTab(id: pid)
+        } else if pane == .secondary, let sid = splitState.secondaryTabID {
+            selectTab(id: sid)
+        }
+    }
+
+    public func replaceSplitTab(pane: SplitPane, newTabID: UUID) {
+        guard tabs.contains(where: { $0.id == newTabID }) else { return }
+        if pane == .primary {
+            splitState.primaryTabID = newTabID
+        } else {
+            splitState.secondaryTabID = newTabID
+        }
+        setSplitActivePane(pane)
+    }
+
+    public var secondaryTab: Tab? {
+        guard splitState.isActive, let sid = splitState.secondaryTabID else { return nil }
+        return tabs.first(where: { $0.id == sid })
+    }
 
     // MARK: - Holo Space Management
+
     
     @discardableResult
     public func createSpace(name: String, icon: String = "folder.fill", colorHex: String = "38BDF8", profileID: UUID) -> HoloSpace {
