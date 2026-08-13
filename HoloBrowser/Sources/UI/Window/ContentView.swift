@@ -10,7 +10,9 @@ public struct ContentView: View {
     @StateObject private var commandManager = CommandManager()
     @StateObject private var modeManager = ModeManager()
     
+    @State private var showTabOverview: Bool = false
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
+
     
     public init(environment: BrowserEnvironment) {
         self.environment = environment
@@ -267,6 +269,38 @@ public struct ContentView: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(HoloTheme.Palette.crystalSpecularGradient, lineWidth: 1.25)
         )
+        .overlay(
+            ZStack {
+                // Command Palette (Cmd + K) Floating Overlay
+                CommandPaletteView(
+                    commandManager: commandManager,
+                    browserViewModel: viewModel,
+                    aiManager: environment.aiManager,
+                    modeManager: modeManager,
+                    overlayCoordinator: overlayCoordinator
+                )
+                
+                // Spatial HoloTabOverviewView Overlay (⌘⇧O)
+                if showTabOverview {
+                    HoloTabOverviewView(
+                        tabManager: viewModel.tabManager,
+                        activeProfileID: viewModel.profileManager.activeProfile.id,
+                        isPresented: $showTabOverview
+                    )
+                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                }
+            }
+        )
+        .onReceive(HoloEventBus.shared.publisher) { event in
+            switch event {
+            case .openTabOverview:
+                withAnimation(HoloTheme.Animations.springSnappy) {
+                    showTabOverview.toggle()
+                }
+            default:
+                break
+            }
+        }
         .background(
             KeyboardShortcutHandlerView(
                 viewModel: viewModel,

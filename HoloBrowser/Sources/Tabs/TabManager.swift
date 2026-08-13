@@ -191,8 +191,64 @@ public final class TabManager: ObservableObject {
     }
 
     @Published public private(set) var tabGroups: [TabGroup] = []
+    @Published public private(set) var spaces: [HoloSpace] = []
+    @Published public var activeSpaceID: UUID? = nil
+
+    // MARK: - Holo Space Management
+    
+    @discardableResult
+    public func createSpace(name: String, icon: String = "folder.fill", colorHex: String = "38BDF8", profileID: UUID) -> HoloSpace {
+        let space = HoloSpace(name: name, icon: icon, colorHex: colorHex, profileID: profileID)
+        spaces.append(space)
+        return space
+    }
+    
+    public func renameSpace(id: UUID, newName: String) {
+        if let index = spaces.firstIndex(where: { $0.id == id }) {
+            spaces[index].name = newName
+            spaces[index].updatedAt = Date()
+        }
+    }
+    
+    /// Deletes a HoloSpace while safely preserving all assigned tabs in the unassigned pool.
+    public func deleteSpace(id: UUID) {
+        spaces.removeAll(where: { $0.id == id })
+        if activeSpaceID == id {
+            activeSpaceID = nil
+        }
+    }
+    
+    public func assignTabToSpace(tabID: UUID, spaceID: UUID?) {
+        // Remove tab from all spaces first to prevent duplicates
+        for i in spaces.indices {
+            spaces[i].tabIDs.removeAll(where: { $0 == tabID })
+        }
+        
+        if let spaceID = spaceID, let index = spaces.firstIndex(where: { $0.id == spaceID }) {
+            spaces[index].tabIDs.append(tabID)
+            spaces[index].updatedAt = Date()
+        }
+    }
+    
+    public func selectSpace(id: UUID?) {
+        activeSpaceID = id
+    }
+    
+    /// Returns tabs belonging to a specific profile & optional Space filter.
+    public func tabs(for profileID: UUID, spaceID: UUID? = nil) -> [Tab] {
+        guard let spaceID = spaceID, let space = spaces.first(where: { $0.id == spaceID && $0.profileID == profileID }) else {
+            return tabs
+        }
+        return tabs.filter { space.containsTab(id: $0.id) }
+    }
+    
+    /// Profile-isolated spaces for active profile.
+    public func spaces(for profileID: UUID) -> [HoloSpace] {
+        return spaces.filter { $0.profileID == profileID }
+    }
 
     // MARK: - Tab Management Features (Phase 4)
+
     
     public func pinTab(id: UUID) {
         if let idx = tabs.firstIndex(where: { $0.id == id }) {

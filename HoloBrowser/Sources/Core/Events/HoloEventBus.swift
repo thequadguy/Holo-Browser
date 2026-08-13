@@ -10,7 +10,9 @@ public enum HoloEvent: Equatable {
     case openImportWizard
     case newTabShortcut
     case focusAddressBar
+    case openTabOverview
     case quickActionSummarize
+
     case quickActionSaveMemory
     case smartSearchAI(query: String)
     case smartSearchMission(query: String)

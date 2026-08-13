@@ -48,8 +48,22 @@ public struct TabBarView: View {
                 }
             }
             
+            // Tab Overview Grid Button (⌘⇧O)
+            Button(action: {
+                HoloEventBus.shared.post(.openTabOverview)
+            }) {
+                Image(systemName: "square.grid.2x2")
+                    .font(.system(size: 11, weight: .bold))
+                    .frame(width: 28, height: 28)
+                    .background(Circle().fill(Color.gray.opacity(0.12)))
+            }
+            .buttonStyle(.plain)
+            .foregroundColor(.secondary)
+            .help("Tab Overview & Holo Spaces (⌘⇧O)")
+            
             // Tab Overflow Menu Button (Lists all open tabs for instant selection on smaller screens)
             if tabManager.tabs.count > 5 {
+
                 Menu {
                     ForEach(tabManager.tabs) { tab in
                         Button(action: {
