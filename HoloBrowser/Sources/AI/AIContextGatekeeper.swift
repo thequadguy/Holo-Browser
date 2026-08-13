@@ -45,6 +45,30 @@ public final class AIContextGatekeeper: ObservableObject {
             throw AIError.privacyConfirmationRequired("High-risk data detected: \(reasons)")
         }
         
+    }
+    
+    /// Privacy validation gatekeeper for screenshot visual context.
+    public func validateImageContext(
+        visualContext: HoloVisualContext?,
+        isPrivateBrowsing: Bool,
+        domainHost: String? = nil
+    ) throws {
+        guard let visual = visualContext else { return }
+        
+        if isPrivateBrowsing {
+            throw AIError.privacyBlocked("Visual context transmission is disabled in Private Browsing mode.")
+        }
+        
+        if let host = domainHost?.lowercased(), isHighRiskSensitiveDomain(host) {
+            throw AIError.privacyBlocked("Visual context transmission blocked on sensitive domain: \(host)")
+        }
+        
+        if visual.imageData.count > 500 * 1024 {
+            throw AIError.privacyBlocked("Visual context payload exceeds maximum 500 KB limit.")
+        }
+    }
+
+        
         // 5. Mandatory Regex Context Sanitization & Unicode Normalization
         let sanitizedPrompt = privacyManager.sanitizeContextForAI(prompt)
         

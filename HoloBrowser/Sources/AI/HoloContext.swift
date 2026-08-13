@@ -58,19 +58,49 @@ public struct HoloContext: Codable, Equatable {
     public let relevantTabs: [RelevantTab]
     public let activeSpaceName: String?
     public let isPrivateBrowsing: Bool
+    public let visualContext: HoloVisualContext?
     
     public init(
         currentPage: CurrentPage? = nil,
         selectedText: String? = nil,
         relevantTabs: [RelevantTab] = [],
         activeSpaceName: String? = nil,
-        isPrivateBrowsing: Bool = false
+        isPrivateBrowsing: Bool = false,
+        visualContext: HoloVisualContext? = nil
     ) {
         self.currentPage = currentPage
         self.selectedText = selectedText
         self.relevantTabs = relevantTabs
         self.activeSpaceName = activeSpaceName
         self.isPrivateBrowsing = isPrivateBrowsing
+        self.visualContext = visualContext
+    }
+}
+
+/// Dedicated transient visual context structure for screenshot payloads.
+/// Avoids bloating standard text contexts with heavy binary data.
+public struct HoloVisualContext: Equatable {
+    public let imageData: Data
+    public let mimeType: String
+    public let width: Int
+    public let height: Int
+    public let sourceTabID: UUID
+    public let timestamp: Date
+    
+    public init(
+        imageData: Data,
+        mimeType: String = "image/jpeg",
+        width: Int,
+        height: Int,
+        sourceTabID: UUID,
+        timestamp: Date = Date()
+    ) {
+        self.imageData = imageData
+        self.mimeType = mimeType
+        self.width = width
+        self.height = height
+        self.sourceTabID = sourceTabID
+        self.timestamp = timestamp
     }
 }
 
@@ -80,8 +110,9 @@ public enum HoloContextBuilder {
     public static let maxSelectedTextLength = 1000
     public static let maxRelevantTabsCount = 5
     public static let maxTabSnippetLength = 800
+    public static let maxImagePayloadBytes = 500 * 1024 // 500 KB limit
     
-    /// Bounds and sanitizes raw text fields for HoloContext.
+    /// Bounds and sanitizes raw text fields and visual context for HoloContext.
     public static func buildSanitizedContext(
         currentPageTitle: String?,
         currentPageURL: String?,
@@ -91,6 +122,7 @@ public enum HoloContextBuilder {
         tabs: [HoloContext.RelevantTab] = [],
         activeSpaceName: String?,
         isPrivateBrowsing: Bool,
+        visualContext: HoloVisualContext? = nil,
         privacyManager: AIPrivacyManager
     ) -> HoloContext {
         
@@ -136,12 +168,22 @@ public enum HoloContextBuilder {
             )
         }
         
+        // Ensure visualContext obeys private browsing shield and max byte size
+        let safeVisualContext: HoloVisualContext?
+        if let visual = visualContext, !isPrivateBrowsing, visual.imageData.count <= maxImagePayloadBytes {
+            safeVisualContext = visual
+        } else {
+            safeVisualContext = nil
+        }
+        
         return HoloContext(
             currentPage: sanitizedCurrentPage,
             selectedText: boundedSelectedText,
             relevantTabs: Array(boundedTabs),
             activeSpaceName: activeSpaceName,
-            isPrivateBrowsing: isPrivateBrowsing
+            isPrivateBrowsing: isPrivateBrowsing,
+            visualContext: safeVisualContext
         )
     }
 }
+

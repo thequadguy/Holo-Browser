@@ -98,7 +98,12 @@ public enum AIContextBuilder {
             }
         }
 
+        if let visual = holoContext.visualContext {
+            combinedContext += "[Visual Context Attached: \(visual.width)x\(visual.height) px, \(visual.imageData.count / 1024) KB JPEG screenshot]\n\n"
+        }
+
         let userMsg = AIMessage(role: .user, content: sanitizedQuery)
+
         let allMessages = historyMessages + [userMsg]
 
         return AIRequest(

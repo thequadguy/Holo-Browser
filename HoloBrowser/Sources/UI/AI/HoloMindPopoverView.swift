@@ -71,14 +71,17 @@ public struct HoloMindPopoverView: View {
             // Quick Actions
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
+                    HoloMindQuickAction(
+                        title: ScreenshotManager.shared.isCapturing ? "Capturing..." : "Capture & Ask",
+                        icon: "camera.viewfinder"
+                    ) {
+                        triggerCaptureAndAsk()
+                    }
                     HoloMindQuickAction(title: "Summarize", icon: "doc.plaintext") {
                         triggerSummarize()
                     }
                     HoloMindQuickAction(title: "Explain", icon: "text.magnifyingglass") {
                         triggerExplain()
-                    }
-                    HoloMindQuickAction(title: "Research", icon: "book.fill") {
-                        submitAction("Research this topic")
                     }
                     HoloMindQuickAction(title: "Compare Tabs", icon: "arrow.left.and.right") {
                         submitAction("Compare my open tabs")
@@ -87,6 +90,44 @@ public struct HoloMindPopoverView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
             }
+            
+            // Screenshot Preview Badge
+            if let visualContext = ScreenshotManager.shared.lastCapturedVisualContext,
+               let nsImage = NSImage(data: visualContext.imageData) {
+                HStack(spacing: 8) {
+                    Image(nsImage: nsImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 44, height: 28)
+                        .cornerRadius(4)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Screenshot Attached (\(visualContext.width)x\(visualContext.height))")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(.primary)
+                        Text("\(visualContext.imageData.count / 1024) KB JPEG")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    Button(action: {
+                        ScreenshotManager.shared.clearVisualContext()
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Clear screenshot preview")
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(RoundedRectangle(cornerRadius: 8).fill(HoloTheme.Palette.holoCyan.opacity(0.12)))
+                .padding(.horizontal, 16)
+                .padding(.bottom, 8)
+            }
+
             
             // Input Bar
             HoloMindInputBar(
@@ -143,7 +184,23 @@ public struct HoloMindPopoverView: View {
     
     // MARK: - Actions
     
+    private func triggerCaptureAndAsk() {
+        guard let tab = activeTab else { return }
+        Task { @MainActor in
+            do {
+                _ = try await ScreenshotManager.shared.captureTabSnapshot(
+                    tab: tab,
+                    isPrivateBrowsing: false
+                )
+                self.inputText = "Analyze this page screenshot and summarize visual details"
+            } catch {
+                aiManager.conversationManager.appendMessage(AIMessage(role: .assistant, content: "Screenshot error: \(error.localizedDescription)"))
+            }
+        }
+    }
+    
     private func submitAction(_ prompt: String) {
+
         let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         
