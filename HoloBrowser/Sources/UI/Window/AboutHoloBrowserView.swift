@@ -90,6 +90,16 @@ public struct AboutHoloBrowserView: View {
         }
         .padding(24)
         .frame(width: 320)
-        .background(VisualEffectViewWrapper(material: .popover, blendingMode: .withinWindow))
+        .background(
+            ZStack {
+                VisualEffectViewWrapper(material: .popover, blendingMode: .withinWindow)
+                HoloTheme.Palette.chromeFill
+            }
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(HoloTheme.Palette.glassBorderGradient, lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 }

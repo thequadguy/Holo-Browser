@@ -20,88 +20,37 @@ public struct HoloGlassCardModifier: ViewModifier {
         content
             .padding(padding)
             .background(
-                GeometryReader { proxy in
-                    let bounds = proxy.size
-                    let mx = mousePosition?.x ?? bounds.width / 2
-                    let my = mousePosition?.y ?? bounds.height / 2
+                ZStack {
+                    // Layer 1: Background Blur Layer (Behind-Window Vibrancy)
+                    VisualEffectViewWrapper(material: .popover, blendingMode: .behindWindow)
                     
-                    ZStack {
-                        // Layer 1: Background Blur Layer (Behind-Window Vibrancy)
-                        VisualEffectViewWrapper(material: .popover, blendingMode: .behindWindow)
-                        
-                        // Layer 2: Frost / Transparency Layer (Sheer 2% / 8% white fill)
-                        RoundedRectangle(cornerRadius: cornerRadius)
-                            .fill(hover ? Color.white.opacity(0.08) : Color.white.opacity(0.02))
-                        
-                        // Layer 3: Internal Tint Layer (Soft ice blue specular cast)
-                        RoundedRectangle(cornerRadius: cornerRadius)
-                            .fill(HoloTheme.Palette.iceBlue.opacity(hover ? 0.12 : 0.04))
-                        
-                        // Layer 4: Dynamic Interactive Specular Refraction Beam on Hover
-                        if hover {
-                            RadialGradient(
-                                gradient: Gradient(colors: [
-                                    Color.white.opacity(0.65),
-                                    HoloTheme.Palette.holoCyan.opacity(0.18),
-                                    HoloTheme.Palette.holoViolet.opacity(0.08),
-                                    .clear
-                                ]),
-                                center: UnitPoint(x: mx / max(bounds.width, 1), y: my / max(bounds.height, 1)),
-                                startRadius: 0,
-                                endRadius: max(bounds.width, bounds.height) * 0.85
-                            )
-                            .blendMode(.screen)
-                            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-                        }
-                    }
-                    .onAppear {
-                        lightingEngine.updateCursorPosition(CGPoint(x: mx, y: my), in: bounds)
-                    }
+                    // Layer 2: Sheer Neutral Optical Fill (Quiet translucent fill)
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .fill(hover ? Color.white.opacity(0.04) : Color.white.opacity(0.01))
                 }
             )
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
             .overlay(
-                GeometryReader { proxy in
-                    let bounds = proxy.size
-                    let mx = mousePosition?.x ?? bounds.width / 2
-                    let my = mousePosition?.y ?? bounds.height / 2
-                    let dx = (mx - bounds.width / 2) / max(bounds.width, 1)
-                    let dy = (my - bounds.height / 2) / max(bounds.height, 1)
-                    let chromaticX = hover ? dx * 2.0 : 0
-                    let chromaticY = hover ? dy * 2.0 : 0
-                    
-                    ZStack {
-                        // Layer 5: Top-Left Pure White Specular Light Rim & Iridescent Catch
-                        RoundedRectangle(cornerRadius: cornerRadius)
-                            .stroke(
-                                hover ?
-                                HoloTheme.Palette.glassBorderGradient :
-                                LinearGradient(
-                                    colors: [Color.white.opacity(0.80), Color.white.opacity(0.35), HoloTheme.Palette.holoCyan.opacity(0.18)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 1.0
-                            )
-                        
-                        // Prism dispersion sheen on hover interaction
-                        if hover {
-                            RoundedRectangle(cornerRadius: cornerRadius)
-                                .stroke(HoloTheme.Palette.holoCyan.opacity(0.30), lineWidth: 0.5)
-                                .offset(x: chromaticX, y: chromaticY)
-                                .blendMode(.screen)
-                            
-                            RoundedRectangle(cornerRadius: cornerRadius)
-                                .stroke(HoloTheme.Palette.holoPink.opacity(0.25), lineWidth: 0.5)
-                                .offset(x: -chromaticX, y: -chromaticY)
-                                .blendMode(.screen)
-                        }
-                    }
-                }
+                // Layer 3: Quiet Neutral Specular Edge
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .stroke(
+                        hover ?
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.30), Color.white.opacity(0.10)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ) :
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.18), Color.white.opacity(0.04)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 0.5
+                    )
             )
-            // Layer 6: Delicate Elevation Drop Shadow
+            // Layer 4: Soft Neutral Elevation Shadow
             .shadow(
-                color: hover ? Color.black.opacity(0.12) : Color.black.opacity(0.04),
+                color: hover ? Color.black.opacity(0.08) : Color.black.opacity(0.03),
                 radius: hover ? 8 : 4,
                 x: 0,
                 y: hover ? 3 : 1
@@ -132,18 +81,18 @@ public struct HoloGlassBackgroundModifier: ViewModifier {
                 ZStack {
                     VisualEffectViewWrapper(material: material, blendingMode: .behindWindow)
                     RoundedRectangle(cornerRadius: cornerRadius)
-                        .fill(Color.white.opacity(0.25))
+                        .fill(Color.white.opacity(0.02))
                 }
                 .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
                 .overlay(
                     RoundedRectangle(cornerRadius: cornerRadius)
                         .stroke(
                             LinearGradient(
-                                colors: [Color.white.opacity(0.80), HoloTheme.Palette.holoCyan.opacity(0.25), Color.white.opacity(0.20)],
+                                colors: [Color.white.opacity(0.20), Color.white.opacity(0.04)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             ),
-                            lineWidth: 1
+                            lineWidth: 0.5
                         )
                 )
             )
@@ -233,30 +182,21 @@ public extension View {
         )
     }
     
-    /// Tier 5: Holo Glass (HoloMind surfaces & Vision Pro spatial cards — Level 5, 58% fill)
+    /// Tier 5: Holo Glass (HoloMind surfaces & Vision Pro spatial cards — Level 5, optical crystal fill)
     func holoHoloGlass(cornerRadius: CGFloat = 18) -> some View {
         let tier = HoloDesign.MaterialTier.holoGlass
         return self.background(
             ZStack {
                 VisualEffectViewWrapper(material: tier.material, blendingMode: .behindWindow)
                 RoundedRectangle(cornerRadius: cornerRadius)
-                    .fill(Color.white.opacity(tier.opacity))
-                
-                RadialGradient(
-                    colors: [HoloTheme.Palette.iceBlue.opacity(0.30), HoloTheme.Palette.holoCyan.opacity(0.15), HoloTheme.Palette.holoViolet.opacity(0.08), .clear],
-                    center: .topLeading,
-                    startRadius: 0,
-                    endRadius: 320
-                )
-                .blendMode(.screen)
-                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+                    .fill(Color.white.opacity(0.04))
             }
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius)
-                    .stroke(tier.specularRimGradient, lineWidth: 1.2)
+                    .stroke(tier.specularRimGradient, lineWidth: 0.5)
             )
-            .shadow(color: HoloTheme.Glow.cyan.opacity(0.18), radius: tier.shadowRadius, y: 6)
+            .shadow(color: tier.shadowColor, radius: tier.shadowRadius, y: 6)
         )
     }
     

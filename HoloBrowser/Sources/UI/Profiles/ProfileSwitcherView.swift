@@ -52,8 +52,16 @@ public struct ProfileSwitcherView: View {
         .padding(14)
         .frame(width: 280)
         .background(
-            VisualEffectViewWrapper(material: .popover, blendingMode: .withinWindow)
+            ZStack {
+                VisualEffectViewWrapper(material: .popover, blendingMode: .withinWindow)
+                HoloTheme.Palette.chromeFill
+            }
         )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(HoloTheme.Palette.glassBorderGradient, lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12))
         .sheet(isPresented: $showCreateSheet) {
             CreateProfileSheetView(profileManager: profileManager) {
                 showCreateSheet = false

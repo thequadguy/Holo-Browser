@@ -76,6 +76,7 @@ public struct AddressBarView: View {
                 TextField("Search or type URL", text: $viewModel.inputURLString)
                     .textFieldStyle(.plain)
                     .font(.system(size: 13, weight: isFocused ? .semibold : .medium, design: .default))
+                    .foregroundColor(.primary)
                     .focused($isFocused)
                     .onSubmit {
                         if omniboxViewModel.selectedIndex >= 0 {
@@ -125,30 +126,25 @@ public struct AddressBarView: View {
                 }
             }
             .padding(.horizontal, 14)
-            .frame(height: 32)
+            .frame(maxWidth: .infinity)
+            .frame(height: 34)
             .background(
-                ZStack {
-                    VisualEffectViewWrapper(material: .popover, blendingMode: .behindWindow)
-                        .clipShape(Capsule())
-                    
-                    Capsule()
-                        .fill(isFocused ? Color.black.opacity(0.12) : Color.black.opacity(0.04))
-                }
+                Capsule()
+                    .fill(Color.white.opacity(isFocused ? 0.09 : 0.05))
             )
             .overlay(
                 Capsule()
                     .stroke(
-                        isFocused ? AnyShapeStyle(Color.white.opacity(0.25)) : AnyShapeStyle(HoloTheme.Palette.glassBorderGradient),
-                        lineWidth: isFocused ? 1.0 : 0.5
+                        isFocused ? AnyShapeStyle(HoloTheme.Palette.glassBorderGradient) : AnyShapeStyle(Color.white.opacity(0.18)),
+                        lineWidth: isFocused ? 1.1 : 0.75
                     )
             )
             .shadow(
-                color: isFocused ? Color.black.opacity(0.20) : Color.black.opacity(0.04),
-                radius: isFocused ? 8 : 3,
+                color: isFocused ? Color.black.opacity(0.12) : Color.clear,
+                radius: isFocused ? 8 : 0,
                 x: 0,
-                y: isFocused ? 2 : 1
+                y: 0
             )
-            .scaleEffect(isFocused ? 1.02 : 1.0)
             .animation(HoloDesign.Animations.springNormal, value: isFocused)
             .onReceive(NotificationCenter.default.publisher(for: .focusAddressBar)) { _ in
                 isFocused = true
@@ -207,7 +203,14 @@ public struct AddressBarView: View {
                     .holoDeepGlass(cornerRadius: 12)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(HoloTheme.Palette.glassBorderGradient, lineWidth: 0.5)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [Color.white.opacity(0.20), Color.white.opacity(0.04)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 0.5
+                            )
                     )
                     .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 5)
                     .padding(.top, 4)

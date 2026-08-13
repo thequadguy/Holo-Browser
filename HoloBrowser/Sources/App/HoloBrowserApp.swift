@@ -10,7 +10,7 @@ struct HoloBrowserApp: App {
             ContentView(environment: environment)
         }
         .windowStyle(.titleBar)
-        .windowToolbarStyle(.unified)
+        .windowToolbarStyle(.unified(showsTitle: false))
         .commands {
             // File > New
             CommandGroup(replacing: .newItem) {

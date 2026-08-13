@@ -6,15 +6,18 @@ public struct VisualEffectViewWrapper: NSViewRepresentable {
     public var material: NSVisualEffectView.Material
     public var blendingMode: NSVisualEffectView.BlendingMode
     public var state: NSVisualEffectView.State
+    public var appearance: NSAppearance?
     
     public init(
         material: NSVisualEffectView.Material = .popover,
         blendingMode: NSVisualEffectView.BlendingMode = .behindWindow,
-        state: NSVisualEffectView.State = .followsWindowActiveState
+        state: NSVisualEffectView.State = .followsWindowActiveState,
+        appearance: NSAppearance? = nil
     ) {
         self.material = material
         self.blendingMode = blendingMode
         self.state = state
+        self.appearance = appearance
     }
     
     public func makeNSView(context: Context) -> NSVisualEffectView {
@@ -22,7 +25,9 @@ public struct VisualEffectViewWrapper: NSViewRepresentable {
         effectView.material = material
         effectView.blendingMode = blendingMode
         effectView.state = state
-        effectView.appearance = NSAppearance(named: .vibrantLight)
+        if let appearance = appearance {
+            effectView.appearance = appearance
+        }
         return effectView
     }
     
@@ -30,6 +35,8 @@ public struct VisualEffectViewWrapper: NSViewRepresentable {
         nsView.material = material
         nsView.blendingMode = blendingMode
         nsView.state = state
-        nsView.appearance = NSAppearance(named: .vibrantLight)
+        if let appearance = appearance {
+            nsView.appearance = appearance
+        }
     }
 }

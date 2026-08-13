@@ -100,16 +100,24 @@ public struct HoloMindPopoverView: View {
         }
         .frame(width: 400)
         .background(
-            VisualEffectViewWrapper(material: .popover, blendingMode: .withinWindow)
-                .overlay(Color.black.opacity(0.15))
+            ZStack {
+                VisualEffectViewWrapper(material: .popover, blendingMode: .withinWindow)
+                HoloTheme.Palette.chromeFill
+            }
         )
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(HoloTheme.Palette.glassBorderGradient, lineWidth: 0.5)
+                .stroke(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.22), HoloTheme.Palette.holoCyan.opacity(0.12), Color.white.opacity(0.04)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 0.5
+                )
         )
-        .shadow(color: Color.black.opacity(0.3), radius: 20, x: 0, y: 10)
-        .shadow(color: HoloTheme.Glow.cyan.opacity(0.15), radius: 40, x: 0, y: 10)
+        .shadow(color: Color.black.opacity(0.20), radius: 16, x: 0, y: 8)
         .onAppear {
             withAnimation(Animation.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
                 isBreathing = true
@@ -300,7 +308,7 @@ private struct HoloMindInputBar: View {
         .padding(.vertical, 10)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.black.opacity(0.2))
+                .fill(Color.white.opacity(0.06))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12)

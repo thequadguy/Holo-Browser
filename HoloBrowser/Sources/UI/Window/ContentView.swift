@@ -20,36 +20,51 @@ public struct ContentView: View {
     
     public var body: some View {
         ZStack {
+            // Shared Root Optical Environment (behind chrome, canvas, popovers, and overlays)
+            HoloBackgroundView()
+            
             // Primary Browser Canvas (No Sidebar)
             VStack(spacing: 0) {
-                // Tab Bar (hidden in Focus mode)
+
+                // Unified Chrome Shell: Tab Bar + Navigation Toolbar fused into a single glass surface (hidden in Focus mode)
                 if modeManager.currentMode != .focus {
-                    TabBarView(tabManager: viewModel.tabManager, activeProfileID: viewModel.profileManager.activeProfile.id, onNewTab: { viewModel.createNewTab() })
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                }
-                
-                // Holo Navigation Toolbar (hidden in Focus mode)
-                if modeManager.currentMode != .focus {
-                    NavigationToolbarView(
-                        viewModel: viewModel,
-                        commandManager: commandManager,
-                        modeManager: modeManager,
-                        aiManager: environment.aiManager,
-                        onOpenSettings: { SettingsWindowController.shared.open(viewModel: viewModel, privacyManager: environment.privacyManager) },
-                        onOpenImportWizard: { overlayCoordinator.showImportWizardSheet = true },
-                        onOpenHoloMind: { environment.mindEngine.togglePanel() },
-                        onExecuteQuickAction: { action in
-                            if action == .summarizePage,
-                               let webView = viewModel.tabManager.activeTab?.webView {
-                                environment.mindEngine.summarizePage(
-                                    webView: webView,
-                                    aiManager: environment.aiManager,
-                                    profile: viewModel.profileManager.activeProfile
-                                )
-                            } else {
-                                environment.mindEngine.executeQuickAction(action, context: nil, profile: viewModel.profileManager.activeProfile)
+                    VStack(spacing: 0) {
+                        TabBarView(tabManager: viewModel.tabManager, activeProfileID: viewModel.profileManager.activeProfile.id, onNewTab: { viewModel.createNewTab() })
+
+                        NavigationToolbarView(
+                            viewModel: viewModel,
+                            commandManager: commandManager,
+                            modeManager: modeManager,
+                            aiManager: environment.aiManager,
+                            onOpenSettings: { SettingsWindowController.shared.open(viewModel: viewModel, privacyManager: environment.privacyManager) },
+                            onOpenImportWizard: { overlayCoordinator.showImportWizardSheet = true },
+                            onOpenHoloMind: { environment.mindEngine.togglePanel() },
+                            onExecuteQuickAction: { action in
+                                if action == .summarizePage,
+                                   let webView = viewModel.tabManager.activeTab?.webView {
+                                    environment.mindEngine.summarizePage(
+                                        webView: webView,
+                                        aiManager: environment.aiManager,
+                                        profile: viewModel.profileManager.activeProfile
+                                    )
+                                } else {
+                                    environment.mindEngine.executeQuickAction(action, context: nil, profile: viewModel.profileManager.activeProfile)
+                                }
                             }
+                        )
+                    }
+                    .background(
+                        ZStack {
+                            VisualEffectViewWrapper(material: .headerView, blendingMode: .behindWindow)
+                            HoloTheme.Palette.chromeFill
                         }
+                    )
+                    .overlay(
+                        Rectangle()
+                            .fill(HoloTheme.Palette.glassBorderGradient)
+                            .opacity(0.5)
+                            .frame(height: 1),
+                        alignment: .bottom
                     )
                     .transition(.move(edge: .top).combined(with: .opacity))
                 }
@@ -247,17 +262,19 @@ public struct ContentView: View {
             }
         }
         .frame(minWidth: 800, minHeight: 600)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(HoloTheme.Palette.crystalSpecularGradient, lineWidth: 1.25)
+        )
         .background(
-            ZStack {
-                HoloBackgroundView()
-                KeyboardShortcutHandlerView(
-                    viewModel: viewModel,
-                    commandManager: commandManager,
-                    modeManager: modeManager,
-                    aiManager: environment.aiManager,
-                    onOpenSettings: { SettingsWindowController.shared.open(viewModel: viewModel, privacyManager: environment.privacyManager) }
-                )
-            }
+            KeyboardShortcutHandlerView(
+                viewModel: viewModel,
+                commandManager: commandManager,
+                modeManager: modeManager,
+                aiManager: environment.aiManager,
+                onOpenSettings: { SettingsWindowController.shared.open(viewModel: viewModel, privacyManager: environment.privacyManager) }
+            )
         )
         .onAppear {
             viewModel.tabManager.permissionManager = environment.permissionManager
@@ -360,8 +377,22 @@ public struct ContentView: View {
                 }
             case .quickActionSaveMemory:
                 environment.mindEngine.executeQuickAction(.saveToMemory, context: "Selected text from Context Menu", profile: viewModel.profileManager.activeProfile)
-            case .smartSearchAI:
+            case .smartSearchAI(let query):
                 environment.aiManager.isSidebarVisible = true
+                let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty {
+                    if let webView = viewModel.tabManager.activeTab?.webView {
+                        Task { @MainActor in
+                            if let context = try? await PageContextBuilder.buildContext(from: webView) {
+                                environment.aiManager.askPage(question: trimmed, text: context.bodyText)
+                            } else {
+                                environment.aiManager.chat(userText: trimmed)
+                            }
+                        }
+                    } else {
+                        environment.aiManager.chat(userText: trimmed)
+                    }
+                }
             case .smartSearchMission(let query):
                 environment.mindEngine.assignGoal(title: query, category: .research)
                 environment.aiManager.isSidebarVisible = true

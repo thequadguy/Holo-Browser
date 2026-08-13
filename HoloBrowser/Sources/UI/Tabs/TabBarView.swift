@@ -16,7 +16,7 @@ public struct TabBarView: View {
         HStack(spacing: 4) {
             ScrollViewReader { proxy in
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
+                    HStack(spacing: 6) {
                         ForEach(tabManager.tabs) { tab in
                             TabItemView(
                                 tab: tab,
@@ -36,8 +36,8 @@ public struct TabBarView: View {
                             .id(tab.id)
                         }
                     }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 2)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
                 }
                 .onChange(of: tabManager.activeTabID) { oldID, newID in
                     if let newID = newID {
@@ -95,5 +95,6 @@ public struct TabBarView: View {
             .help("New Tab (⌘T)")
         }
         .padding(.horizontal, 6)
+        .padding(.top, 4)
     }
 }

@@ -22,41 +22,71 @@ public enum HoloTheme {
         
         public static let primaryAccent = appleBlue
         
-        /// Soft spectral hero gradient reflecting crystal light
+        /// Quiet neutral optical specular gradient reflecting crystal light
         public static let heroGradient = LinearGradient(
-            colors: [appleBlue, holoCyan, holoViolet, holoPink],
+            colors: [Color.white.opacity(0.35), Color.white.opacity(0.12), iceBlue.opacity(0.15)],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
         
-        /// Pure white specular glass border gradient with soft prismatic iridescence
+        /// Pure neutral optical specular glass border gradient
         public static let glassBorderGradient = LinearGradient(
             colors: [
-                Color.white.opacity(0.85),
-                Color.white.opacity(0.45),
-                holoCyan.opacity(0.30),
-                holoViolet.opacity(0.20),
-                Color.white.opacity(0.20)
+                Color.white.opacity(0.22),
+                Color.white.opacity(0.10),
+                Color.white.opacity(0.04),
+                Color.white.opacity(0.08)
             ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
         
-        /// Pure Apple Vision Pro crystal specular rim gradient (quiet, white light highlight with subtle ice blue sheen)
+        /// Glowing electric blue-cyan holographic gradient (reflecting luminous spatial light)
+        public static let holoBlueIridescentGradient = LinearGradient(
+            colors: [
+                Color(hex: "60A5FA"),
+                Color(hex: "38BDF8"),
+                Color(hex: "93C5FD"),
+                Color(hex: "2563EB")
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+
+        /// Iridescent blue text gradient for holographic title typography
+        public static let holoBlueTextGradient = LinearGradient(
+            colors: [
+                Color(hex: "93C5FD"),
+                Color(hex: "38BDF8"),
+                Color(hex: "60A5FA"),
+                Color(hex: "E0F2FE")
+            ],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
+
+        /// Electric blue holographic specular rim gradient
         public static let crystalSpecularGradient = LinearGradient(
             colors: [
-                Color.white.opacity(0.92),
-                Color.white.opacity(0.50),
-                iceBlue.opacity(0.35),
-                holoCyan.opacity(0.18),
-                Color.white.opacity(0.25)
+                Color(hex: "38BDF8").opacity(0.40),
+                Color(hex: "60A5FA").opacity(0.25),
+                Color.white.opacity(0.10),
+                Color(hex: "2563EB").opacity(0.30)
             ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
         
-        /// Backward compatibility alias
-        public static let rainbowIridescentGradient = crystalSpecularGradient
+        /// Electric blue holographic gradient alias
+        public static let rainbowIridescentGradient = holoBlueIridescentGradient
+
+        // MARK: - Unified Chrome Shell (Clear Glass, Holographic Edge)
+
+        /// Plain translucent fill for the fused tab bar + toolbar shell
+        public static let chromeFill = Color.white.opacity(0.10)
+
+        /// Quiet hairline border used behind the holographic rim (fallback for non-edge dividers)
+        public static let chromeBorder = Color.white.opacity(0.25)
     }
     
     // MARK: - 6-Level Elevation Hierarchy System (Apple Sheer Spatial Glass Standard)

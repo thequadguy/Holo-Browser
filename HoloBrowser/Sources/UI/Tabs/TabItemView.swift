@@ -67,38 +67,31 @@ public struct TabItemView: View {
                     ZStack {
                         VisualEffectViewWrapper(material: .popover, blendingMode: .withinWindow)
                             .clipShape(RoundedRectangle(cornerRadius: 8))
-                        
+
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.white.opacity(0.10))
-                            
+                            .fill(Color.white.opacity(0.14))
+
                         RoundedRectangle(cornerRadius: 8)
-                            .stroke(
-                                LinearGradient(
-                                    colors: [Color.white.opacity(0.60), Color.white.opacity(0.10)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 1.0
-                            )
+                            .stroke(HoloTheme.Palette.glassBorderGradient, lineWidth: 0.85)
                     }
                 } else {
                     ZStack {
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(isHovered ? Color.white.opacity(0.06) : Color.white.opacity(0.02))
+                            .fill(isHovered ? Color.white.opacity(0.06) : Color.clear)
                         
                         if isHovered {
                             RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                                .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
                         }
                     }
                 }
             }
         )
         .shadow(
-            color: isActive ? Color.black.opacity(0.15) : (isHovered ? Color.black.opacity(0.05) : Color.clear),
-            radius: isActive ? 6 : 3,
+            color: isActive ? Color.black.opacity(0.10) : Color.clear,
+            radius: isActive ? 4 : 0,
             x: 0,
-            y: isActive ? 3 : 1
+            y: isActive ? 2 : 0
         )
         // Ensure active tab casts a subtle depth shadow onto lower components
         .zIndex(isActive ? 1 : 0)

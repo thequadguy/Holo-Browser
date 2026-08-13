@@ -111,6 +111,27 @@ public struct HoloSecondaryButtonStyle: ButtonStyle {
     }
 }
 
+/// Minimal, translucent button style for chrome controls — quiet at rest, softly illuminated on hover/press.
+public struct QuietChromeButtonStyle: ButtonStyle {
+    @State private var isHovered: Bool = false
+
+    public init() {}
+
+    public func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(
+                Circle()
+                    .fill(isHovered || configuration.isPressed ? Color.white.opacity(0.08) : Color.clear)
+            )
+            .scaleEffect(configuration.isPressed ? 0.94 : 1.0)
+            .animation(HoloTheme.Animations.springSnappy, value: configuration.isPressed)
+            .animation(HoloTheme.Animations.easeOutFast, value: isHovered)
+            .onHover { hovering in
+                isHovered = hovering
+            }
+    }
+}
+
 public struct HoloBadge: View {
     let text: String
     let color: Color

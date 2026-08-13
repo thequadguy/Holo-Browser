@@ -56,7 +56,12 @@ public struct BrowserImportWizardView: View {
                 Spacer()
             }
             .padding(16)
-            .background(VisualEffectViewWrapper(material: .headerView, blendingMode: .withinWindow))
+            .background(
+                ZStack {
+                    VisualEffectViewWrapper(material: .headerView, blendingMode: .withinWindow)
+                    HoloTheme.Palette.chromeFill
+                }
+            )
             
             Divider()
             
@@ -94,7 +99,12 @@ public struct BrowserImportWizardView: View {
                 }
             }
             .padding(14)
-            .background(VisualEffectViewWrapper(material: .headerView, blendingMode: .withinWindow))
+            .background(
+                ZStack {
+                    VisualEffectViewWrapper(material: .headerView, blendingMode: .withinWindow)
+                    HoloTheme.Palette.chromeFill
+                }
+            )
         }
         .frame(width: 540, height: 420)
         .holoGlassCard(cornerRadius: 14, padding: 0)

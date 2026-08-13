@@ -59,7 +59,12 @@ public struct HoloWelcomeView: View {
                     HoloBadge("Step \(currentStep + 1) of 5", color: .accentColor)
                 }
                 .padding(20)
-                .background(VisualEffectViewWrapper(material: .headerView, blendingMode: .withinWindow))
+                .background(
+                    ZStack {
+                        VisualEffectViewWrapper(material: .headerView, blendingMode: .withinWindow)
+                        HoloTheme.Palette.chromeFill
+                    }
+                )
                 
                 Divider()
             
@@ -112,7 +117,12 @@ public struct HoloWelcomeView: View {
                 }
             }
             .padding(16)
-            .background(VisualEffectViewWrapper(material: .headerView, blendingMode: .withinWindow))
+            .background(
+                ZStack {
+                    VisualEffectViewWrapper(material: .headerView, blendingMode: .withinWindow)
+                    HoloTheme.Palette.chromeFill
+                }
+            )
         }
         .frame(width: 620, height: 540)
         .holoGlassCard(cornerRadius: 14, padding: 0)
@@ -318,7 +328,12 @@ private struct FeatureBadgeCard: View {
         }
         .frame(maxWidth: .infinity)
         .padding(12)
-        .background(VisualEffectViewWrapper(material: .contentBackground, blendingMode: .withinWindow))
+        .background(
+            ZStack {
+                VisualEffectViewWrapper(material: .contentBackground, blendingMode: .withinWindow)
+                HoloTheme.Palette.chromeFill
+            }
+        )
         .cornerRadius(10)
     }
 }
@@ -364,7 +379,12 @@ private struct ExampleRow: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(VisualEffectViewWrapper(material: .contentBackground, blendingMode: .withinWindow))
+        .background(
+            ZStack {
+                VisualEffectViewWrapper(material: .contentBackground, blendingMode: .withinWindow)
+                HoloTheme.Palette.chromeFill
+            }
+        )
         .cornerRadius(10)
     }
 }

@@ -46,31 +46,31 @@ public enum HoloDesign {
             switch self {
             case .crystalGlass:
                 return LinearGradient(
-                    colors: [Color.white.opacity(0.85), Color.white.opacity(0.40), HoloTheme.Palette.holoCyan.opacity(0.25), Color.white.opacity(0.15)],
+                    colors: [Color.white.opacity(0.18), Color.white.opacity(0.08), Color.white.opacity(0.02)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
             case .clearGlass:
                 return LinearGradient(
-                    colors: [Color.white.opacity(0.88), HoloTheme.Palette.holoCyan.opacity(0.30), Color.white.opacity(0.20)],
+                    colors: [Color.white.opacity(0.20), Color.white.opacity(0.10), Color.white.opacity(0.03)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
             case .frostGlass:
                 return LinearGradient(
-                    colors: [Color.white.opacity(0.90), HoloTheme.Palette.holoCyan.opacity(0.32), HoloTheme.Palette.holoViolet.opacity(0.20), Color.white.opacity(0.22)],
+                    colors: [Color.white.opacity(0.22), Color.white.opacity(0.12), Color.white.opacity(0.04)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
             case .deepGlass:
                 return LinearGradient(
-                    colors: [Color.white.opacity(0.92), HoloTheme.Palette.holoCyan.opacity(0.35), HoloTheme.Palette.holoPink.opacity(0.25), Color.white.opacity(0.25)],
+                    colors: [Color.white.opacity(0.24), Color.white.opacity(0.14), Color.white.opacity(0.05)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
             case .holoGlass:
                 return LinearGradient(
-                    colors: [Color.white.opacity(0.95), HoloTheme.Palette.holoCyan.opacity(0.40), HoloTheme.Palette.holoViolet.opacity(0.30), HoloTheme.Palette.holoPink.opacity(0.20)],
+                    colors: [Color.white.opacity(0.28), HoloTheme.Palette.holoCyan.opacity(0.15), Color.white.opacity(0.06)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
