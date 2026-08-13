@@ -52,4 +52,61 @@ public enum AIContextBuilder {
             temperature: 0.7
         )
     }
+
+    /// Builds an AIRequest from a structured HoloContext model.
+    public static func buildRequest(
+        userQuery: String,
+        holoContext: HoloContext,
+        historyMessages: [AIMessage] = [],
+        privacyManager: AIPrivacyManager
+    ) -> AIRequest {
+        let systemPrompt = "You are HoloMind, a native macOS spatial browser assistant. Provide clear, accurate, and bulleted responses."
+        let sanitizedQuery = privacyManager.sanitizeContextForAI(userQuery)
+
+        var combinedContext = ""
+
+        if let spaceName = holoContext.activeSpaceName, !spaceName.isEmpty {
+            combinedContext += "Active Holo Space: \(spaceName)\n"
+        }
+
+        if let page = holoContext.currentPage {
+            if holoContext.isPrivateBrowsing {
+                combinedContext += "Current Page Title: \(page.title)\n[URL Redacted — Private Browsing]\n"
+            } else {
+                combinedContext += "Current Page Title: \(page.title)\nURL: \(page.urlString)\n"
+            }
+            if !page.headings.isEmpty {
+                combinedContext += "Headings: \(page.headings.joined(separator: " | "))\n"
+            }
+            if !page.extractedText.isEmpty {
+                combinedContext += "Content Summary:\n\(page.extractedText)\n\n"
+            }
+        }
+
+        if let selection = holoContext.selectedText, !selection.isEmpty {
+            combinedContext += "User Selected Text:\n\"\(selection)\"\n\n"
+        }
+
+        if !holoContext.relevantTabs.isEmpty {
+            combinedContext += "Relevant Open Tabs:\n"
+            for tab in holoContext.relevantTabs {
+                combinedContext += "- \(tab.title) (\(tab.urlString))"
+                if let snippet = tab.snippet, !snippet.isEmpty {
+                    combinedContext += ": \(snippet)"
+                }
+                combinedContext += "\n"
+            }
+        }
+
+        let userMsg = AIMessage(role: .user, content: sanitizedQuery)
+        let allMessages = historyMessages + [userMsg]
+
+        return AIRequest(
+            messages: allMessages,
+            pageContextText: combinedContext.isEmpty ? nil : combinedContext,
+            systemInstruction: systemPrompt,
+            temperature: 0.7
+        )
+    }
 }
+
