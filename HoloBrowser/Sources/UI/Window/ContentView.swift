@@ -212,6 +212,7 @@ extension ContentView {
 
     func onAppearSetup() {
         viewModel.tabManager.permissionManager = environment.permissionManager
+        environment.permissionManager.tabManager = viewModel.tabManager
         viewModel.tabManager.reliabilityManager = environment.reliabilityManager
         setupTabManagerForStartup()
         commandManager.registerDefaultCommands(

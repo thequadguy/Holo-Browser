@@ -10,6 +10,7 @@ extension ContentView {
         focusModeOverlay
         mediaPermissionOverlay
         webErrorOverlay
+        javaScriptDialogOverlay
     }
 
     @ViewBuilder
@@ -155,6 +156,31 @@ extension ContentView {
                 onDismiss: { viewModel.dismissError() }
             )
             .transition(.scale.combined(with: .opacity))
+        }
+    }
+
+    @ViewBuilder
+    private var javaScriptDialogOverlay: some View {
+        if let dialog = environment.permissionManager.pendingDialog {
+            ZStack {
+                Color.black.opacity(0.35)
+                    .ignoresSafeArea()
+
+                JavaScriptDialogOverlayView(
+                    dialog: dialog,
+                    onResolveAlert: {
+                        environment.permissionManager.resolveAlert(id: dialog.id)
+                    },
+                    onResolveConfirm: { result in
+                        environment.permissionManager.resolveConfirm(id: dialog.id, result: result)
+                    },
+                    onResolvePrompt: { text in
+                        environment.permissionManager.resolvePrompt(id: dialog.id, text: text)
+                    }
+                )
+                .transition(.scale.combined(with: .opacity))
+            }
+            .animation(HoloDesign.Animations.springNormal, value: environment.permissionManager.pendingDialog?.id)
         }
     }
 
