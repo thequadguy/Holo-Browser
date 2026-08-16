@@ -6,20 +6,20 @@ import WebKit
 public struct HoloMindPopoverView: View {
     @ObservedObject var aiManager: AIManager
     let activeTab: Tab?
-    
+
     @State private var inputText: String = ""
     @FocusState private var isInputFocused: Bool
     @State private var showPreviewSheet: Bool = false
-    @State private var pendingContext: PageContext? = nil
-    
+    @State private var pendingContext: PageContext?
+
     // Breathing animation for loading state
     @State private var isBreathing: Bool = false
-    
+
     public init(aiManager: AIManager, activeTab: Tab?) {
         self.aiManager = aiManager
         self.activeTab = activeTab
     }
-    
+
     public var body: some View {
         VStack(spacing: 0) {
             // Header
@@ -30,9 +30,9 @@ public struct HoloMindPopoverView: View {
                     aiManager.isSidebarVisible = false
                 }
             )
-            
+
             Divider().overlay(Color.white.opacity(0.1))
-            
+
             // Response / Context Area
             ScrollView {
                 VStack(spacing: 12) {
@@ -65,9 +65,9 @@ public struct HoloMindPopoverView: View {
             }
             .frame(maxHeight: 400) // Dynamically grows, but caps at 400
             .fixedSize(horizontal: false, vertical: true)
-            
+
             Divider().overlay(Color.white.opacity(0.1))
-            
+
             // Quick Actions
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
@@ -90,7 +90,7 @@ public struct HoloMindPopoverView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
             }
-            
+
             // Screenshot Preview Badge
             if let visualContext = ScreenshotManager.shared.lastCapturedVisualContext,
                let nsImage = NSImage(data: visualContext.imageData) {
@@ -100,7 +100,7 @@ public struct HoloMindPopoverView: View {
                         .aspectRatio(contentMode: .fill)
                         .frame(width: 44, height: 28)
                         .cornerRadius(4)
-                    
+
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Screenshot Attached (\(visualContext.width)x\(visualContext.height))")
                             .font(.system(size: 11, weight: .semibold))
@@ -109,15 +109,15 @@ public struct HoloMindPopoverView: View {
                             .font(.system(size: 10))
                             .foregroundColor(.secondary)
                     }
-                    
+
                     Spacer()
-                    
+
                     Button(action: {
                         ScreenshotManager.shared.clearVisualContext()
-                    }) {
+                    }, label: {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundColor(.secondary)
-                    }
+                    })
                     .buttonStyle(.plain)
                     .accessibilityLabel("Clear screenshot preview")
                 }
@@ -128,7 +128,6 @@ public struct HoloMindPopoverView: View {
                 .padding(.bottom, 8)
             }
 
-            
             // Input Bar
             HoloMindInputBar(
                 text: $inputText,
@@ -151,7 +150,11 @@ public struct HoloMindPopoverView: View {
             RoundedRectangle(cornerRadius: 16)
                 .stroke(
                     LinearGradient(
-                        colors: [Color.white.opacity(0.22), HoloTheme.Palette.holoCyan.opacity(0.12), Color.white.opacity(0.04)],
+                        colors: [
+                            Color.white.opacity(0.22),
+                            HoloTheme.Palette.holoCyan.opacity(0.12),
+                            Color.white.opacity(0.04)
+                        ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ),
@@ -181,34 +184,76 @@ public struct HoloMindPopoverView: View {
             }
         }
     }
-    
+
     // MARK: - Actions
-    
+
     private func triggerCaptureAndAsk() {
         guard let tab = activeTab else { return }
+
+        // CB-2 Fix: derive private-browsing state from the tab's authoritative isPrivate
+        // property — never trust a hardcoded Boolean. ScreenshotManager independently
+        // enforces the same guard as a second layer of defence.
+        let isPrivate = tab.isPrivate
+
         Task { @MainActor in
             do {
-                _ = try await ScreenshotManager.shared.captureTabSnapshot(
-                    tab: tab,
-                    isPrivateBrowsing: false
+                // Pre-flight gatekeeper check before capture is attempted.
+                // This is intentionally called BEFORE WKWebView.takeSnapshot so no
+                // pixels are captured from a blocked context.
+                try AIContextGatekeeper.shared.validateImageContext(
+                    visualContext: nil,          // Pre-capture check — no data yet.
+                    isPrivateBrowsing: isPrivate,
+                    domainHost: tab.url?.host?.lowercased()
                 )
-                self.inputText = "Analyze this page screenshot and summarize visual details"
+
+                let visual = try await ScreenshotManager.shared.captureTabSnapshot(
+                    tab: tab,
+                    isPrivateBrowsing: isPrivate
+                )
+
+                // Post-capture gatekeeper: validates the actual payload size.
+                try AIContextGatekeeper.shared.validateImageContext(
+                    visualContext: visual,
+                    isPrivateBrowsing: isPrivate,
+                    domainHost: tab.url?.host?.lowercased()
+                )
+
+                // Auto-submit: "Capture & Ask" means capture AND send to AI.
+                // The default prompt can be overridden by text already in the input bar.
+                let prompt = inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    ? "Analyze this page screenshot and describe what you see in detail."
+                    : inputText
+
+                aiManager.captureAndAsk(
+                    question: prompt,
+                    visualContext: visual,
+                    pageText: nil,
+                    isPrivate: isPrivate
+                )
+                inputText = ""
             } catch {
-                aiManager.conversationManager.appendMessage(AIMessage(role: .assistant, content: "Screenshot error: \(error.localizedDescription)"))
+                // Any failure (private browsing, domain block, size limit, capture failure)
+                // surfaces the reason and clears any partially captured data.
+                ScreenshotManager.shared.clearVisualContext()
+                let id = aiManager.conversationManager.appendAssistantPlaceholder()
+                aiManager.conversationManager.updateStreamingMessage(
+                    id: id,
+                    text: "Screenshot blocked: \(error.localizedDescription)"
+                )
+                aiManager.conversationManager.finishStreaming()
             }
         }
     }
-    
-    private func submitAction(_ prompt: String) {
 
+    private func submitAction(_ prompt: String) {
         let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        
+
         guard let webView = activeTab?.webView else {
             aiManager.chat(userText: trimmed)
             return
         }
-        
+
         Task { @MainActor in
             if let context = try? await PageContextBuilder.buildContext(from: webView) {
                 aiManager.askPage(question: trimmed, text: context.bodyText)
@@ -217,7 +262,7 @@ public struct HoloMindPopoverView: View {
             }
         }
     }
-    
+
     private func triggerSummarize() {
         guard let webView = activeTab?.webView else { return }
         Task { @MainActor in
@@ -227,7 +272,7 @@ public struct HoloMindPopoverView: View {
             }
         }
     }
-    
+
     private func triggerExplain() {
         guard let webView = activeTab?.webView else { return }
         Task { @MainActor in
@@ -247,7 +292,7 @@ private struct HoloMindHeaderView: View {
     let isThinking: Bool
     let isBreathing: Bool
     let onClose: () -> Void
-    
+
     var body: some View {
         HStack {
             HStack(spacing: 6) {
@@ -256,11 +301,11 @@ private struct HoloMindHeaderView: View {
                     .font(.system(size: 14, weight: .bold))
                     .scaleEffect(isThinking && isBreathing ? 1.2 : 1.0)
                     .opacity(isThinking && isBreathing ? 0.7 : 1.0)
-                
+
                 Text("HoloMind")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.primary)
-                
+
                 if isThinking {
                     Text("Thinking...")
                         .font(.system(size: 11, weight: .medium))
@@ -269,9 +314,9 @@ private struct HoloMindHeaderView: View {
                         .opacity(isBreathing ? 0.6 : 1.0)
                 }
             }
-            
+
             Spacer()
-            
+
             Button(action: onClose) {
                 Image(systemName: "xmark")
                     .font(.system(size: 11, weight: .bold))
@@ -286,7 +331,7 @@ private struct HoloMindHeaderView: View {
 
 private struct HoloMindResponseArea: View {
     let message: AIMessage
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(message.content.isEmpty ? "..." : message.content)
@@ -304,9 +349,9 @@ private struct HoloMindQuickAction: View {
     let title: String
     let icon: String
     let action: () -> Void
-    
+
     @State private var isHovered: Bool = false
-    
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 4) {
@@ -323,7 +368,10 @@ private struct HoloMindQuickAction: View {
             )
             .overlay(
                 Capsule()
-                    .stroke(isHovered ? HoloTheme.Palette.holoCyan.opacity(0.4) : Color.white.opacity(0.1), lineWidth: 0.5)
+                    .stroke(
+                        isHovered ? HoloTheme.Palette.holoCyan.opacity(0.4) : Color.white.opacity(0.1),
+                        lineWidth: 0.5
+                    )
             )
             .foregroundColor(isHovered ? HoloTheme.Palette.holoCyan : .primary)
         }
@@ -340,7 +388,7 @@ private struct HoloMindInputBar: View {
     @Binding var text: String
     var isFocused: FocusState<Bool>.Binding
     let onSubmit: () -> Void
-    
+
     var body: some View {
         HStack(spacing: 8) {
             TextField("Ask HoloMind...", text: $text)
@@ -350,7 +398,7 @@ private struct HoloMindInputBar: View {
                 .onSubmit {
                     onSubmit()
                 }
-            
+
             Button(action: onSubmit) {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.system(size: 20))
@@ -369,7 +417,12 @@ private struct HoloMindInputBar: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(isFocused.wrappedValue ? HoloTheme.Palette.holoCyan.opacity(0.5) : Color.white.opacity(0.1), lineWidth: 1)
+                .stroke(
+                    isFocused.wrappedValue
+                        ? HoloTheme.Palette.holoCyan.opacity(0.5)
+                        : Color.white.opacity(0.1),
+                    lineWidth: 1
+                )
         )
         .padding(.horizontal, 16)
         .padding(.bottom, 16)

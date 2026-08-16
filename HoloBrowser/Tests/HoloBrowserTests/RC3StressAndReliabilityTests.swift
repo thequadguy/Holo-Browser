@@ -1,4 +1,5 @@
 import Foundation
+@testable import HoloBrowser
 
 /// Swift 6 test runner suite for RC3 Stress Testing, Reliability, and Self-Healing Validation.
 /// Can be invoked directly via Swift code without requiring external XCTest frameworks.
@@ -12,6 +13,7 @@ public enum RC3StressAndReliabilityRunner {
         public let message: String
     }
     
+    /// Executes all RC3 stress and reliability test suites and returns their aggregated results.
     public static func runAllTests() async -> [TestResult] {
         var results: [TestResult] = []
         
@@ -80,7 +82,7 @@ public enum RC3StressAndReliabilityRunner {
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("test_write.json")
         let items = [HistoryItem(urlString: "https://apple.com", title: "Apple")]
         
-        await DiskStorageActor.shared.write(items, to: tempURL)
+        try? await DiskStorageActor.shared.write(items, to: tempURL)
         let read = try? await DiskStorageActor.shared.read(from: tempURL, type: [HistoryItem].self)
         let passed = read?.count == 1
         
@@ -111,6 +113,7 @@ public enum RC3StressAndReliabilityRunner {
         )
     }
     
+    @MainActor
     private static func testDownloadPathTraversalShield() -> TestResult {
         let dm = DownloadManager()
         let dirtyFilename = "../../etc/passwd"
@@ -125,6 +128,7 @@ public enum RC3StressAndReliabilityRunner {
         )
     }
     
+    @MainActor
     private static func testPrivateBrowsingIsolation() -> TestResult {
         let hs = HistoryStore()
         let initialCount = hs.historyItems.count
@@ -137,10 +141,11 @@ public enum RC3StressAndReliabilityRunner {
         )
     }
     
+    @MainActor
     private static func testTabScalabilityAndMemorySuspension() -> TestResult {
         let tm = TabManager()
-        for i in 0..<205 {
-            tm.createNewTab(url: URL(string: "https://example.com/\(i)")!)
+        for tabIndex in 0..<205 {
+            tm.createNewTab(url: URL(string: "https://example.com/\(tabIndex)")!)
         }
         let totalCount = tm.tabs.count
         tm.suspendInactiveTabs(maxActiveBackground: 4)

@@ -36,8 +36,8 @@ public final class AIPrivacyManager: ObservableObject {
         sanitized = sanitized.replacingOccurrences(of: "eyJ[A-Za-z0-9_-]+\\.eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+", with: "[JWT_TOKEN_REDACTED]", options: .regularExpression)
         
         // 3. API Keys (OpenAI sk-..., Anthropic sk-ant-...)
-        sanitized = sanitized.replacingOccurrences(of: "sk-[A-Za-z0-9]{20,}", with: "[API_KEY_REDACTED]", options: .regularExpression)
-        sanitized = sanitized.replacingOccurrences(of: "sk-ant-[A-Za-z0-9_-]{20,}", with: "[API_KEY_REDACTED]", options: .regularExpression)
+        sanitized = sanitized.replacingOccurrences(of: "sk-[A-Za-z0-9_\\-]{20,}", with: "[API_KEY_REDACTED]", options: .regularExpression)
+        sanitized = sanitized.replacingOccurrences(of: "sk-ant-[A-Za-z0-9_\\-]{20,}", with: "[API_KEY_REDACTED]", options: .regularExpression)
         
         // 4. Sensitive URL & Header Key-Value Parameters
         let sensitiveParamsPattern = "(?i)(access_token|refresh_token|auth_token|api_key|password|passwd|secret|session_id)=[^&\\s]+"
@@ -48,11 +48,14 @@ public final class AIPrivacyManager: ObservableObject {
         sanitized = sanitized.replacingOccurrences(of: jsonSecretPattern, with: "\"$1\": \"[REDACTED]\"", options: .regularExpression)
         
         // 6. Private Key Blocks
-        let privateKeyPattern = "-----BEGIN [A-Z ]+PRIVATE KEY-----[\\s\\S]*?-----END [A-Z ]+PRIVATE KEY-----"
+        let privateKeyPattern = "-----BEGIN (?:[A-Z ]+ )?PRIVATE KEY-----[\\s\\S]*?-----END (?:[A-Z ]+ )?PRIVATE KEY-----"
         sanitized = sanitized.replacingOccurrences(of: privateKeyPattern, with: "[PRIVATE_KEY_REDACTED]", options: .regularExpression)
         
         // 7. Credit Card Numbers (16-digit format with optional hyphens/spaces)
-        let creditCardPattern = "\\b(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13}|6(?:011|5[0-9]{2})[0-9]{12})\\b"
+        let ccVisaMastercard = "4[0-9]{3}[- ]?[0-9]{4}[- ]?[0-9]{4}[- ]?[0-9]{1,4}|5[1-5][0-9]{2}[- ]?[0-9]{4}[- ]?[0-9]{4}[- ]?[0-9]{4}"
+        let ccAmexDiscover = "3[47][0-9]{2}[- ]?[0-9]{6}[- ]?[0-9]{5}|6(?:011|5[0-9]{2})[- ]?[0-9]{4}[- ]?[0-9]{4}[- ]?[0-9]{4}"
+        let ccRawDigits = "4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13}|6(?:011|5[0-9]{2})[0-9]{12}"
+        let creditCardPattern = "\\b(?:\(ccVisaMastercard)|\(ccAmexDiscover)|\(ccRawDigits))\\b"
         sanitized = sanitized.replacingOccurrences(of: creditCardPattern, with: "[CREDIT_CARD_REDACTED]", options: .regularExpression)
         
         // 8. Social Security Numbers (XXX-XX-XXXX)

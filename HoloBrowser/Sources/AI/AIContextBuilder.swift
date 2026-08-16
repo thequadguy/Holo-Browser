@@ -1,6 +1,7 @@
 import Foundation
 
-/// Prompt engineering builder combining user query, DOM context, selection, and history into sanitized AIRequest models.
+/// Prompt engineering builder combining user query, DOM context, selection, and history
+/// into sanitized AIRequest models.
 @MainActor
 public enum AIContextBuilder {
 
@@ -20,7 +21,8 @@ public enum AIContextBuilder {
         privacyManager: AIPrivacyManager,
         isPrivateBrowsing: Bool = false
     ) -> AIRequest {
-        let systemPrompt = "You are Holo AI, a high-performance native macOS web browser assistant. Provide clear, accurate, and bulleted responses."
+        let systemPrompt = "You are Holo AI, a high-performance native macOS web browser assistant. "
+            + "Provide clear, accurate, and bulleted responses."
 
         let sanitizedQuery = privacyManager.sanitizeContextForAI(userQuery)
 
@@ -31,9 +33,11 @@ public enum AIContextBuilder {
             if isPrivateBrowsing {
                 // P1-4: In private browsing, omit the URL entirely from the AI context.
                 // Title is still included as it typically contains no sensitive identifiers.
-                combinedContext += "Webpage Title: \(ctx.title)\n[URL redacted — Private Browsing]\n\nPage Content:\n\(sanitized)\n\n"
+                combinedContext += "Webpage Title: \(ctx.title)\n[URL redacted — Private Browsing]\n"
+                    + "\nPage Content:\n\(sanitized)\n\n"
             } else {
-                combinedContext += "Webpage Title: \(ctx.title)\nURL: \(ctx.urlString)\n\nPage Content:\n\(sanitized)\n\n"
+                combinedContext += "Webpage Title: \(ctx.title)\nURL: \(ctx.urlString)\n"
+                    + "\nPage Content:\n\(sanitized)\n\n"
             }
         }
 
@@ -60,7 +64,8 @@ public enum AIContextBuilder {
         historyMessages: [AIMessage] = [],
         privacyManager: AIPrivacyManager
     ) -> AIRequest {
-        let systemPrompt = "You are HoloMind, a native macOS spatial browser assistant. Provide clear, accurate, and bulleted responses."
+        let systemPrompt = "You are HoloMind, a native macOS spatial browser assistant. "
+            + "Provide clear, accurate, and bulleted responses."
         let sanitizedQuery = privacyManager.sanitizeContextForAI(userQuery)
 
         var combinedContext = ""
@@ -99,11 +104,12 @@ public enum AIContextBuilder {
         }
 
         if let visual = holoContext.visualContext {
-            combinedContext += "[Visual Context Attached: \(visual.width)x\(visual.height) px, \(visual.imageData.count / 1024) KB JPEG screenshot]\n\n"
+            let kilobytes = visual.imageData.count / 1024
+            combinedContext += "[Visual Context Attached: \(visual.width)x\(visual.height) px, "
+                + "\(kilobytes) KB JPEG screenshot]\n\n"
         }
 
         let userMsg = AIMessage(role: .user, content: sanitizedQuery)
-
         let allMessages = historyMessages + [userMsg]
 
         return AIRequest(
@@ -114,4 +120,3 @@ public enum AIContextBuilder {
         )
     }
 }
-

@@ -22,7 +22,7 @@ final class HoloBetaStressTests: XCTestCase {
         
         // Close 50 tabs
         for _ in 0..<50 {
-            tabManager.closeTab(id: tabManager.tabs.last!.id)
+            tabManager.closeTab(id: tabManager.tabs.last!.id, currentProfileID: profileManager.activeProfile.id)
         }
         
         XCTAssertEqual(tabManager.tabs.count, initialCount + 50, "Should handle rapid closure cleanly.")
@@ -39,9 +39,9 @@ final class HoloBetaStressTests: XCTestCase {
         
         var createdIDs: [UUID] = []
         
-        for i in 0..<10 {
-            let p = profileManager.createProfile(name: "Beta Profile \(i)")
-            createdIDs.append(p.id)
+        for profileIndex in 0..<10 {
+            let newProfile = profileManager.createProfile(name: "Beta Profile \(profileIndex)")
+            createdIDs.append(newProfile.id)
         }
         
         XCTAssertEqual(profileManager.profiles.count, initialCount + 10)
@@ -73,7 +73,7 @@ final class HoloBetaStressTests: XCTestCase {
         
         do {
             // Attempt extraction
-            let _ = try gatekeeper.processAndValidateRequest(
+            _ = try gatekeeper.processAndValidateRequest(
                 prompt: "Summarize this page.",
                 context: maliciousDOM,
                 provider: MockAIProvider(),

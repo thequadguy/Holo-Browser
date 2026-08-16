@@ -58,7 +58,7 @@ public final class OmniboxViewModel: ObservableObject {
         var newSuggestions: [OmniboxSuggestion] = []
         
         // 1. Primary Intent via HoloSmartSearchRouter
-        let route = HoloSmartSearchRouter.route(for: trimmed)
+        let route = HoloSmartSearchRouter.route(for: query)
         switch route {
         case .web(let url):
             if url.host?.contains("search.brave.com") == true && !trimmed.hasPrefix("http") && !trimmed.contains(".") {
@@ -78,19 +78,19 @@ public final class OmniboxViewModel: ObservableObject {
                     iconColor: .secondary
                 ))
             }
-        case .ai(let q, _):
+        case .ai(let aiQuery, _):
             newSuggestions.append(OmniboxSuggestion(
-                type: .holomind(prompt: q),
+                type: .holomind(prompt: aiQuery),
                 title: "Ask HoloMind",
-                subtitle: q.isEmpty ? "Type a prompt..." : q,
+                subtitle: aiQuery.isEmpty ? "Type a prompt..." : aiQuery,
                 icon: "sparkles",
                 iconColor: HoloTheme.Palette.holoCyan
             ))
-        case .mission(let q):
+        case .mission(let missionGoal):
             newSuggestions.append(OmniboxSuggestion(
-                type: .mission(goal: q),
+                type: .mission(goal: missionGoal),
                 title: "Start Mission",
-                subtitle: q.isEmpty ? "Type a goal..." : q,
+                subtitle: missionGoal.isEmpty ? "Type a goal..." : missionGoal,
                 icon: "target",
                 iconColor: HoloTheme.Palette.holoEmerald
             ))
@@ -106,12 +106,12 @@ public final class OmniboxViewModel: ObservableObject {
                 $0.title.lowercased().contains(lowerQuery) || $0.urlString.lowercased().contains(lowerQuery)
             }.prefix(2)
             
-            for b in matchingBookmarks {
-                if let url = URL(string: b.urlString) {
+            for bookmarkItem in matchingBookmarks {
+                if let url = URL(string: bookmarkItem.urlString) {
                     newSuggestions.append(OmniboxSuggestion(
                         type: .bookmark(url: url),
-                        title: b.title,
-                        subtitle: b.urlString,
+                        title: bookmarkItem.title,
+                        subtitle: bookmarkItem.urlString,
                         icon: "bookmark.fill",
                         iconColor: .yellow
                     ))
@@ -123,22 +123,19 @@ public final class OmniboxViewModel: ObservableObject {
                 $0.title.lowercased().contains(lowerQuery) || $0.urlString.lowercased().contains(lowerQuery)
             }.prefix(3)
             
-            for h in matchingHistory {
-                // Deduplicate if we already added it as bookmark or primary url
-                if !newSuggestions.contains(where: {
-                    if case .navigation(let existingURL) = $0.type { return existingURL.absoluteString == h.urlString }
-                    if case .bookmark(let existingURL) = $0.type { return existingURL.absoluteString == h.urlString }
-                    return false
-                }) {
-                    if let url = URL(string: h.urlString) {
-                        newSuggestions.append(OmniboxSuggestion(
-                            type: .history(url: url),
-                            title: h.title,
-                            subtitle: h.urlString,
-                            icon: "clock",
-                            iconColor: .secondary
-                        ))
-                    }
+            for historyItem in matchingHistory where !newSuggestions.contains(where: {
+                if case .navigation(let existingURL) = $0.type { return existingURL.absoluteString == historyItem.urlString }
+                if case .bookmark(let existingURL) = $0.type { return existingURL.absoluteString == historyItem.urlString }
+                return false
+            }) {
+                if let url = URL(string: historyItem.urlString) {
+                    newSuggestions.append(OmniboxSuggestion(
+                        type: .history(url: url),
+                        title: historyItem.title,
+                        subtitle: historyItem.urlString,
+                        icon: "clock",
+                        iconColor: .secondary
+                    ))
                 }
             }
         }
@@ -185,8 +182,8 @@ public final class OmniboxViewModel: ObservableObject {
         switch itemToExecute.type {
         case .navigation(let url), .history(let url), .bookmark(let url):
             browserViewModel.tabManager.activeTab?.navigationManager.load(url: url)
-        case .search(let q):
-            if let searchURL = URL(string: "https://search.brave.com/search?q=\(q.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? q)") {
+        case .search(let searchQuery):
+            if let searchURL = URL(string: "https://search.brave.com/search?q=\(searchQuery.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? searchQuery)") {
                 browserViewModel.tabManager.activeTab?.navigationManager.load(url: searchURL)
             }
         case .holomind(let prompt):

@@ -7,11 +7,11 @@ import Combine
 public final class AIManager: ObservableObject {
     @Published public var provider: AIProviderProtocol
     @Published public var isSidebarVisible: Bool = false
-    @Published public var activeTaskError: String? = nil
+    @Published public var activeTaskError: String?
     
     public let privacyManager: AIPrivacyManager
     public let conversationManager = ConversationManager()
-    private var activeStreamTask: Task<Void, Never>? = nil
+    private var activeStreamTask: Task<Void, Never>?
     
     public init(
         provider: AIProviderProtocol = MockAIProvider(),
@@ -20,7 +20,6 @@ public final class AIManager: ObservableObject {
         self.provider = provider
         self.privacyManager = privacyManager ?? AIPrivacyManager()
     }
-
     
     // MARK: - Primary AI API Methods
     
@@ -112,7 +111,10 @@ public final class AIManager: ObservableObject {
                 isPrivateBrowsing: isPrivate
             )
             let message = AIMessage(role: .user, content: sanitizedUserText)
-            let request = AIRequest(messages: conversationManager.messages + [message], pageContextText: sanitizedPageText.isEmpty ? nil : sanitizedPageText)
+            let request = AIRequest(
+                messages: conversationManager.messages + [message],
+                pageContextText: sanitizedPageText.isEmpty ? nil : sanitizedPageText
+            )
             _ = conversationManager.appendUserMessage(sanitizedUserText)
             streamResponse(for: request, isPrivate: isPrivate)
         } catch {
@@ -120,10 +122,51 @@ public final class AIManager: ObservableObject {
         }
     }
     
+    /// Sends a screenshot + question to the AI provider.
+    ///
+    /// Phase 5 implementation: the real JPEG bytes in `visualContext` are attached to the
+    /// `AIRequest` and forwarded to the provider for multimodal transmission.
+    ///
+    /// Screenshot lifecycle: `ScreenshotManager.clearVisualContext()` is called after the
+    /// stream finishes, regardless of success or failure, so JPEG data is never retained
+    /// beyond the AI request that triggered it.
+    public func captureAndAsk(
+        question: String,
+        visualContext: HoloVisualContext,
+        pageText: String?,
+        isPrivate: Bool = false
+    ) {
+        isSidebarVisible = true
+        activeTaskError = nil
+        do {
+            let (sanitizedQuestion, sanitizedPageText) = try AIContextGatekeeper.shared.processAndValidateRequest(
+                prompt: question,
+                context: pageText ?? "",
+                provider: provider,
+                isPrivateBrowsing: isPrivate
+            )
+            let message = AIMessage(role: .user, content: sanitizedQuestion)
+            let sysInstruction = "You are Holo AI, a macOS browser assistant. Analyze the screenshot and respond."
+            let request = AIRequest(
+                messages: conversationManager.messages + [message],
+                pageContextText: sanitizedPageText.isEmpty ? nil : sanitizedPageText,
+                systemInstruction: sysInstruction,
+                temperature: 0.7,
+                visualContext: visualContext
+            )
+            _ = conversationManager.appendUserMessage(sanitizedQuestion)
+            streamResponse(for: request, isPrivate: isPrivate)
+        } catch {
+            activeTaskError = error.localizedDescription
+            // Clear screenshot data even on gatekeeper rejection.
+            ScreenshotManager.shared.clearVisualContext()
+        }
+    }
+
     public func toggleSidebar() {
         isSidebarVisible.toggle()
     }
-    
+
     public func cancelActiveStream() {
         activeStreamTask?.cancel()
         activeStreamTask = nil
@@ -131,18 +174,18 @@ public final class AIManager: ObservableObject {
     }
     
     // MARK: - Streaming Core Logic
-    
+
     private func streamResponse(for request: AIRequest, isPrivate: Bool) {
         cancelActiveStream()
-        
+
         let assistantMsgID = conversationManager.appendAssistantPlaceholder()
-        
+
         activeStreamTask = Task { @MainActor in
             var accumulatedText = ""
             do {
                 // Validate Private Browsing AI rules
                 try privacyManager.validateAIExecution(provider: provider, isPrivate: isPrivate)
-                
+
                 let stream = provider.sendMessage(request)
                 for try await chunk in stream {
                     guard !Task.isCancelled else { break }
@@ -151,9 +194,14 @@ public final class AIManager: ObservableObject {
                 }
             } catch {
                 self.activeTaskError = error.localizedDescription
-                conversationManager.updateStreamingMessage(id: assistantMsgID, text: "Error: \(error.localizedDescription)")
+                conversationManager.updateStreamingMessage(
+                    id: assistantMsgID,
+                    text: "Error: \(error.localizedDescription)"
+                )
             }
             conversationManager.finishStreaming()
+            // Clear transient screenshot data after AI request completes.
+            ScreenshotManager.shared.clearVisualContext()
         }
     }
 }

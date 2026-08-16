@@ -1,4 +1,5 @@
 import XCTest
+import WebKit
 @testable import HoloBrowser
 
 // MARK: - P0-Fix-1 Tests: WKWebsiteDataStore Profile Isolation
@@ -140,7 +141,7 @@ final class PermissionManagerTests: XCTestCase {
                     receivedDecision = decision
                 }
             )
-            pm.pendingRequest = req
+            pm.enqueue(req)
             pm.approve(id: req.id)
 
             XCTAssertEqual(receivedDecision, .grant)
@@ -161,7 +162,7 @@ final class PermissionManagerTests: XCTestCase {
                     receivedDecision = decision
                 }
             )
-            pm.pendingRequest = req
+            pm.enqueue(req)
             pm.deny(id: req.id)
 
             XCTAssertEqual(receivedDecision, .deny)
@@ -179,7 +180,7 @@ final class PermissionManagerTests: XCTestCase {
                 captureType: .camera,
                 decisionHandler: { _ in }
             )
-            pm.pendingRequest = req
+            pm.enqueue(req)
             pm.approve(id: req.id, rememberDecision: true)
             XCTAssertEqual(pm.mediaPermissions["trusted.com"], .grant, "Saved grant decision must be persisted for domain")
         }
@@ -222,30 +223,32 @@ final class AIProviderTests: XCTestCase {
     }
 
     @MainActor
-    func test_providerFactory_returnsMock_whenNoKeyConfigured() {
+    func test_providerFactory_returnsMock_whenNoKeyConfigured() async {
         // Ensure no residual test key exists
-        AIProviderFactory.deleteKey(for: .openAI)
-        let provider = AIProviderFactory.provider(for: .openAI)
+        _ = await AIProviderFactory.deleteKey(for: .openAI)
+        let provider = await AIProviderFactory.provider(for: .openAI)
         XCTAssertTrue(provider is MockAIProvider, "Factory must return MockAIProvider when no OpenAI key is in Keychain")
     }
 
     @MainActor
-    func test_providerFactory_returnsOpenAI_whenKeyIsStored() {
+    func test_providerFactory_returnsOpenAI_whenKeyIsStored() async {
         let testKey = "sk-test-p0fix6-integration-key"
-        AIProviderFactory.saveKey(testKey, for: .openAI)
-        let provider = AIProviderFactory.provider(for: .openAI)
+        _ = await AIProviderFactory.saveKey(testKey, for: .openAI)
+        let provider = await AIProviderFactory.provider(for: .openAI)
         XCTAssertTrue(provider is OpenAIProvider, "Factory must return OpenAIProvider when a key is stored in Keychain")
         // Cleanup
-        AIProviderFactory.deleteKey(for: .openAI)
+        _ = await AIProviderFactory.deleteKey(for: .openAI)
     }
 
     @MainActor
-    func test_providerFactory_isConfigured_returnsTrueAfterSave() {
-        AIProviderFactory.deleteKey(for: .anthropic)
-        XCTAssertFalse(AIProviderFactory.isConfigured(for: .anthropic))
-        AIProviderFactory.saveKey("sk-ant-test", for: .anthropic)
-        XCTAssertTrue(AIProviderFactory.isConfigured(for: .anthropic))
-        AIProviderFactory.deleteKey(for: .anthropic)
+    func test_providerFactory_isConfigured_returnsTrueAfterSave() async {
+        _ = await AIProviderFactory.deleteKey(for: .anthropic)
+        let notConfigured = await AIProviderFactory.isConfigured(for: .anthropic)
+        XCTAssertFalse(notConfigured)
+        _ = await AIProviderFactory.saveKey("sk-ant-test", for: .anthropic)
+        let configured = await AIProviderFactory.isConfigured(for: .anthropic)
+        XCTAssertTrue(configured)
+        _ = await AIProviderFactory.deleteKey(for: .anthropic)
     }
 }
 
@@ -256,10 +259,11 @@ final class TabManagerTests: XCTestCase {
     @MainActor
     func test_recentlyClosedTabs_cappedAt50() {
         let tm = TabManager()
+        let profileID = UUID()
         // Close 60 tabs and verify the cap is enforced
-        for i in 0..<60 {
-            let tab = tm.createNewTab(url: URL(string: "https://example.com/\(i)")!)
-            tm.closeTab(id: tab.id)
+        for tabIndex in 0..<60 {
+            let tab = tm.createNewTab(url: URL(string: "https://example.com/\(tabIndex)")!)
+            tm.closeTab(id: tab.id, currentProfileID: profileID)
         }
         XCTAssertLessThanOrEqual(tm.recentlyClosedTabs.count, 50, "recentlyClosedTabs must be capped at 50 entries")
     }

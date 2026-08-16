@@ -13,8 +13,6 @@ public enum HoloEvent: Equatable {
     case openTabOverview
     case captureScreenshotAndAnalyze
     case quickActionSummarize
-
-
     case quickActionSaveMemory
     case smartSearchAI(query: String)
     case smartSearchMission(query: String)
@@ -26,11 +24,11 @@ public enum HoloEvent: Equatable {
 @MainActor
 public final class HoloEventBus: ObservableObject {
     public static let shared = HoloEventBus()
-    
+
     public let publisher = PassthroughSubject<HoloEvent, Never>()
-    
+
     private init() {}
-    
+
     /// Dispatches a typed HoloEvent across the application.
     public func post(_ event: HoloEvent) {
         publisher.send(event)
