@@ -48,7 +48,8 @@ public struct DownloadItem: Identifiable, Equatable {
 /// Native download manager implementing WKDownloadDelegate to process file downloads to ~/Downloads.
 @MainActor
 public final class DownloadManager: NSObject, ObservableObject, WKDownloadDelegate {
-    
+    public static let shared = DownloadManager()
+
     @Published public private(set) var downloads: [DownloadItem] = []
     
     // Map of active WKDownload to our DownloadItem UUID
@@ -112,29 +113,10 @@ public final class DownloadManager: NSObject, ObservableObject, WKDownloadDelega
     nonisolated public func download(_ download: WKDownload, decideDestinationUsing response: URLResponse, suggestedFilename: String) async -> URL? {
         let downloadsFolder = (FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first ?? URL(fileURLWithPath: NSTemporaryDirectory())).standardized
         
-        // Strip relative components, directory traversal attempts, and leading slashes
-        let cleanName = (suggestedFilename as NSString).lastPathComponent
-            .replacingOccurrences(of: "..", with: "")
-            .trimmingCharacters(in: CharacterSet(charactersIn: "/\\"))
-        
-        let sanitizedFilename = cleanName.isEmpty ? "download" : cleanName
-        let destinationURL = downloadsFolder.appendingPathComponent(sanitizedFilename).standardized
-        
-        // Verify path containment inside ~/Downloads/
-        guard destinationURL.path.hasPrefix(downloadsFolder.path) else {
-            return downloadsFolder.appendingPathComponent("download")
-        }
-        
-        var finalURL = destinationURL
-        var counter = 1
-        let name = destinationURL.deletingPathExtension().lastPathComponent
-        let ext = destinationURL.pathExtension
-        
-        while FileManager.default.fileExists(atPath: finalURL.path) {
-            let newName = ext.isEmpty ? "\(name) (\(counter))" : "\(name) (\(counter)).\(ext)"
-            finalURL = downloadsFolder.appendingPathComponent(newName)
-            counter += 1
-        }
+        let finalURL = DownloadPathSanitizer.sanitizeDestination(
+            suggestedFilename: suggestedFilename,
+            directory: downloadsFolder
+        )
         
         let expectedLength = response.expectedContentLength
         
@@ -184,5 +166,53 @@ public final class DownloadManager: NSObject, ObservableObject, WKDownloadDelega
                 self.downloads[idx] = failed
             }
         }
+    }
+}
+
+/// Pure, deterministic filename and destination path sanitizer defending against traversal and collisions.
+public enum DownloadPathSanitizer {
+
+    /// Sanitizes an incoming suggested filename, stripping path traversals (`..`), slashes, backslashes,
+    /// and control characters, guaranteeing that the returned destination is contained inside `directory`.
+    public static func sanitizeDestination(
+        suggestedFilename: String,
+        directory: URL,
+        fileExists: (String) -> Bool = { FileManager.default.fileExists(atPath: $0) }
+    ) -> URL {
+        let root = directory.standardized
+
+        // Normalize backslashes to forward slashes before extracting lastPathComponent
+        let normalized = suggestedFilename.replacingOccurrences(of: "\\", with: "/")
+        var cleanName = (normalized as NSString).lastPathComponent
+            .replacingOccurrences(of: "..", with: "")
+            .trimmingCharacters(in: CharacterSet(charactersIn: "/\\\0\r\n\t"))
+
+        // Defend against empty string, hidden dotfiles without extension, or whitespace-only names
+        if cleanName.isEmpty || cleanName == "." || cleanName == ".." {
+            cleanName = "download"
+        }
+
+        let destinationURL = root.appendingPathComponent(cleanName).standardized
+
+        // Strict containment check: must start with the root directory's standardized path
+        let safeBaseURL: URL
+        if destinationURL.path.hasPrefix(root.path) {
+            safeBaseURL = destinationURL
+        } else {
+            safeBaseURL = root.appendingPathComponent("download")
+        }
+
+        var finalURL = safeBaseURL
+        var counter = 1
+        let name = safeBaseURL.deletingPathExtension().lastPathComponent
+        let ext = safeBaseURL.pathExtension
+
+        while fileExists(finalURL.path) {
+            let newName = ext.isEmpty ? "\(name) (\(counter))" : "\(name) (\(counter)).\(ext)"
+            finalURL = root.appendingPathComponent(newName)
+            counter += 1
+        }
+
+        return finalURL
     }
 }

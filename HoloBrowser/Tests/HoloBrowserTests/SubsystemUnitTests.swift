@@ -50,9 +50,75 @@ final class SubsystemUnitTests: XCTestCase {
     }
 
     func testUpdateValidator() throws {
-        // UpdateValidator has not yet been added to the main Sources tree.
-        // This test is skipped until the implementation is available.
-        throw XCTSkip("UpdateValidator not yet available in Sources — pending P1 implementation.")
+        let tempDir = FileManager.default.temporaryDirectory
+        let dummyDMG = tempDir.appendingPathComponent("HoloBrowser_Update_Test.dmg")
+        let dummyEXE = tempDir.appendingPathComponent("HoloBrowser_Update_Test.exe")
+        let sampleData = Data("HoloBrowser-Production-Update-Payload-2026".utf8)
+
+        try sampleData.write(to: dummyDMG)
+        try sampleData.write(to: dummyEXE)
+        defer {
+            try? FileManager.default.removeItem(at: dummyDMG)
+            try? FileManager.default.removeItem(at: dummyEXE)
+        }
+
+        // 1. Valid package format
+        XCTAssertNoThrow(try UpdateValidator.validatePackageFormat(at: dummyDMG))
+        XCTAssertThrowsError(try UpdateValidator.validatePackageFormat(at: dummyEXE)) { error in
+            XCTAssertEqual(error as? UpdateValidator.ValidationError, .unsupportedFormat("exe"))
+        }
+
+        // 2. SHA-256 Checksum Verification
+        let actualSHA = try UpdateValidator.computeSHA256(for: dummyDMG)
+        XCTAssertFalse(actualSHA.isEmpty)
+        XCTAssertNoThrow(try UpdateValidator.validateChecksum(for: dummyDMG, expectedSHA256: actualSHA))
+        XCTAssertThrowsError(try UpdateValidator.validateChecksum(for: dummyDMG, expectedSHA256: "deadbeef00000000")) { error in
+            if case .checksumMismatch(let expected, let actual) = error as? UpdateValidator.ValidationError {
+                XCTAssertEqual(expected, "deadbeef00000000")
+                XCTAssertEqual(actual, actualSHA)
+            } else {
+                XCTFail("Expected checksumMismatch error")
+            }
+        }
+
+        // 3. Semantic Version Comparison & Progression
+        XCTAssertEqual(try UpdateValidator.compareVersions("1.0.0", "1.1.0"), .orderedAscending)
+        XCTAssertEqual(try UpdateValidator.compareVersions("1.2.0", "1.2.0"), .orderedSame)
+        XCTAssertEqual(try UpdateValidator.compareVersions("2.0.0", "1.9.9"), .orderedDescending)
+        XCTAssertEqual(try UpdateValidator.compareVersions("v1.2.3-beta.1", "1.2.3"), .orderedSame)
+
+        XCTAssertNoThrow(try UpdateValidator.validateVersionProgression(currentVersion: "1.0.0", targetVersion: "1.1.0"))
+        XCTAssertThrowsError(try UpdateValidator.validateVersionProgression(currentVersion: "2.0.0", targetVersion: "1.9.0")) { error in
+            XCTAssertEqual(error as? UpdateValidator.ValidationError, .downgradeAttempt(current: "2.0.0", target: "1.9.0"))
+        }
+
+        // 4. Combined Pipeline Validation
+        XCTAssertTrue(UpdateValidator.validateUpdatePackage(
+            at: dummyDMG,
+            targetVersion: "1.1.0",
+            currentVersion: "1.0.0",
+            expectedSHA256: actualSHA
+        ))
+
+        // Rejection: Invalid version string
+        XCTAssertFalse(UpdateValidator.validateUpdatePackage(
+            at: dummyDMG,
+            targetVersion: "invalid_ver"
+        ))
+
+        // Rejection: Downgrade attempt
+        XCTAssertFalse(UpdateValidator.validateUpdatePackage(
+            at: dummyDMG,
+            targetVersion: "0.9.0",
+            currentVersion: "1.0.0"
+        ))
+
+        // Rejection: Non-existent file
+        let missingURL = tempDir.appendingPathComponent("non_existent_file.dmg")
+        XCTAssertFalse(UpdateValidator.validateUpdatePackage(
+            at: missingURL,
+            targetVersion: "2.0.0"
+        ))
     }
 
     @MainActor
@@ -76,9 +142,48 @@ final class SubsystemUnitTests: XCTestCase {
 
     @MainActor
     func testDownloadManagerPathTraversalSanitization() async throws {
-        // WKDownload instances can only be created by WebKit internally via its
-        // delegate flow — they cannot be instantiated with WKDownload() directly.
-        throw XCTSkip("WKDownload requires delegate-driven WebKit flow.")
+        let downloadsFolder = FileManager.default.temporaryDirectory.appendingPathComponent("TestDownloads")
+        try? FileManager.default.createDirectory(at: downloadsFolder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: downloadsFolder) }
+
+        // 1. Defend against ../../ relative directory traversal
+        let dirty1 = "../../etc/passwd"
+        let clean1 = DownloadPathSanitizer.sanitizeDestination(suggestedFilename: dirty1, directory: downloadsFolder)
+        XCTAssertTrue(clean1.path.hasPrefix(downloadsFolder.path), "Must be contained in downloads folder")
+        XCTAssertEqual(clean1.lastPathComponent, "passwd")
+
+        // 2. Defend against ../../../tmp/file
+        let dirty2 = "../../../tmp/malicious.sh"
+        let clean2 = DownloadPathSanitizer.sanitizeDestination(suggestedFilename: dirty2, directory: downloadsFolder)
+        XCTAssertTrue(clean2.path.hasPrefix(downloadsFolder.path))
+        XCTAssertEqual(clean2.lastPathComponent, "malicious.sh")
+
+        // 3. Defend against absolute paths
+        let dirty3 = "/private/etc/shadow"
+        let clean3 = DownloadPathSanitizer.sanitizeDestination(suggestedFilename: dirty3, directory: downloadsFolder)
+        XCTAssertTrue(clean3.path.hasPrefix(downloadsFolder.path))
+        XCTAssertEqual(clean3.lastPathComponent, "shadow")
+
+        // 4. Defend against Windows backslashes
+        let dirty4 = "..\\..\\windows\\system32\\cmd.exe"
+        let clean4 = DownloadPathSanitizer.sanitizeDestination(suggestedFilename: dirty4, directory: downloadsFolder)
+        XCTAssertTrue(clean4.path.hasPrefix(downloadsFolder.path))
+        XCTAssertEqual(clean4.lastPathComponent, "cmd.exe")
+
+        // 5. Defend against empty string and dotfiles
+        let emptyClean = DownloadPathSanitizer.sanitizeDestination(suggestedFilename: "", directory: downloadsFolder)
+        XCTAssertTrue(emptyClean.path.hasPrefix(downloadsFolder.path))
+        XCTAssertEqual(emptyClean.lastPathComponent, "download")
+
+        let dotClean = DownloadPathSanitizer.sanitizeDestination(suggestedFilename: ".", directory: downloadsFolder)
+        XCTAssertTrue(dotClean.path.hasPrefix(downloadsFolder.path))
+        XCTAssertEqual(dotClean.lastPathComponent, "download")
+
+        // 6. Collision numbering
+        let existingFile = downloadsFolder.appendingPathComponent("archive.zip")
+        try Data("test".utf8).write(to: existingFile)
+        let collisionClean = DownloadPathSanitizer.sanitizeDestination(suggestedFilename: "archive.zip", directory: downloadsFolder)
+        XCTAssertEqual(collisionClean.lastPathComponent, "archive (1).zip")
     }
 
     @MainActor
@@ -132,5 +237,20 @@ final class SubsystemUnitTests: XCTestCase {
         let json = MemoryPrivacyManager.exportMemoriesJSON()
         XCTAssertNotNil(json)
         MemoryPrivacyManager.clearAllMemories()
+    }
+
+    @MainActor
+    func testContentBlockingManagerRuleApplication() {
+        let blocker = ContentBlockingManager.shared
+        XCTAssertTrue(blocker.isEnabled)
+
+        let config = WKWebViewConfiguration()
+        blocker.applyRules(to: config)
+
+        // Toggle state verification
+        blocker.setEnabled(false)
+        XCTAssertFalse(blocker.isEnabled)
+        blocker.setEnabled(true)
+        XCTAssertTrue(blocker.isEnabled)
     }
 }

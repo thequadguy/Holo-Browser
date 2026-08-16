@@ -13,7 +13,7 @@ public final class NavigationManager: NSObject, ObservableObject {
     @Published public private(set) var estimatedProgress: Double = 0.0
     @Published public private(set) var canGoBack: Bool = false
     @Published public private(set) var canGoForward: Bool = false
-    @Published public private(set) var errorMessage: String? = nil
+    @Published public private(set) var errorMessage: String?
     
     /// Reference to the active HoloWebView
     public weak var webView: WKWebView? {
@@ -150,6 +150,43 @@ extension NavigationManager: WKNavigationDelegate {
                 }
             }
             decisionHandler(.allow)
+        }
+    }
+
+    nonisolated public func webView(
+        _ webView: WKWebView,
+        decidePolicyFor navigationResponse: WKNavigationResponse,
+        decisionHandler: @escaping @MainActor @Sendable (WKNavigationResponsePolicy) -> Void
+    ) {
+        Task { @MainActor in
+            // Direct downloadable files that WebKit cannot render
+            if !navigationResponse.canShowMIMEType {
+                decisionHandler(.download)
+                return
+            }
+
+            // Explicit Content-Disposition: attachment header
+            if let httpResponse = navigationResponse.response as? HTTPURLResponse {
+                if let disposition = httpResponse.allHeaderFields["Content-Disposition"] as? String,
+                   disposition.lowercased().contains("attachment") {
+                    decisionHandler(.download)
+                    return
+                }
+            }
+
+            decisionHandler(.allow)
+        }
+    }
+
+    nonisolated public func webView(_ webView: WKWebView, navigationResponse: WKNavigationResponse, didBecome download: WKDownload) {
+        Task { @MainActor in
+            download.delegate = DownloadManager.shared
+        }
+    }
+
+    nonisolated public func webView(_ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload) {
+        Task { @MainActor in
+            download.delegate = DownloadManager.shared
         }
     }
     
